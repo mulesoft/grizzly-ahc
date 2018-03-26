@@ -37,11 +37,11 @@ import org.eclipse.jetty.security.HashLoginService;
 import org.eclipse.jetty.security.LoginService;
 import org.eclipse.jetty.security.authentication.BasicAuthenticator;
 import org.eclipse.jetty.security.authentication.DigestAuthenticator;
-import org.eclipse.jetty.server.Connector;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.Server;
+import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.AbstractHandler;
-import org.eclipse.jetty.server.nio.SelectChannelConnector;
+import org.eclipse.jetty.server.handler.HandlerWrapper;
 import org.eclipse.jetty.util.security.Constraint;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
@@ -86,7 +86,7 @@ public abstract class BasicAuthTest extends AbstractBasicTest {
         root.addAppender(new ConsoleAppender(new PatternLayout(PatternLayout.TTCC_CONVERSION_PATTERN)));
 
         port1 = findFreePort();
-        Connector listener = new SelectChannelConnector();
+        ServerConnector listener = new ServerConnector(server);
 
         listener.setHost("127.0.0.1");
         listener.setPort(port1);
@@ -116,7 +116,6 @@ public abstract class BasicAuthTest extends AbstractBasicTest {
         security.setConstraintMappings(cm, knownRoles);
         security.setAuthenticator(new BasicAuthenticator());
         security.setLoginService(loginService);
-        security.setStrict(false);
         security.setHandler(configureHandler());
 
         server.setHandler(security);
@@ -154,7 +153,7 @@ public abstract class BasicAuthTest extends AbstractBasicTest {
         server2 = new Server();
         port2 = findFreePort();
 
-        SelectChannelConnector connector = new SelectChannelConnector();
+        ServerConnector connector = new ServerConnector(server2);
         connector.setHost("127.0.0.1");
         connector.setPort(port2);
 
@@ -193,7 +192,6 @@ public abstract class BasicAuthTest extends AbstractBasicTest {
         security.setConstraintMappings(cm, knownRoles);
         security.setAuthenticator(new DigestAuthenticator());
         security.setLoginService(loginService);
-        security.setStrict(true);
         security.setHandler(new RedirectHandler());
 
         server2.setHandler(security);
@@ -208,7 +206,7 @@ public abstract class BasicAuthTest extends AbstractBasicTest {
         serverNoAuth = new Server();
         portNoAuth = findFreePort();
 
-        Connector listener = new SelectChannelConnector();
+        ServerConnector listener = new ServerConnector(serverNoAuth);
         listener.setHost("127.0.0.1");
         listener.setPort(portNoAuth);
 
@@ -222,7 +220,7 @@ public abstract class BasicAuthTest extends AbstractBasicTest {
         serverNoAuth.stop();
     }
 
-    private class RedirectHandler extends AbstractHandler {
+    private class RedirectHandler extends HandlerWrapper {
 
         public void handle(String s, Request r, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
 
@@ -250,7 +248,7 @@ public abstract class BasicAuthTest extends AbstractBasicTest {
         }
     }
 
-    private class SimpleHandler extends AbstractHandler {
+    private class SimpleHandler extends HandlerWrapper {
 
         public void handle(String s, Request r, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
         	

@@ -21,6 +21,7 @@ import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.Response;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
+import org.eclipse.jetty.server.handler.HandlerWrapper;
 import org.slf4j.LoggerFactory;
 import org.testng.annotations.Test;
 
@@ -44,7 +45,7 @@ import static org.testng.Assert.assertNotNull;
  * @author Hubert Iwaniuk
  */
 public abstract class QueryParametersTest extends AbstractBasicTest {
-    private class QueryStringHandler extends AbstractHandler {
+    private class QueryStringHandler extends HandlerWrapper {
         public void handle(String s, Request r, HttpServletRequest request, HttpServletResponse response) throws IOException, ServletException {
             if ("GET".equalsIgnoreCase(request.getMethod())) {
                 String qs = request.getQueryString();

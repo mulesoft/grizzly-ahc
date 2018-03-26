@@ -29,6 +29,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
+import org.eclipse.jetty.server.handler.HandlerWrapper;
 import org.testng.annotations.Test;
 
 import com.ning.http.client.AsyncHttpClient;
@@ -39,7 +40,7 @@ import com.ning.http.client.Response;
  */
 public abstract class Expect100ContinueTest extends AbstractBasicTest {
 
-    private class ZeroCopyHandler extends AbstractHandler {
+    private class ZeroCopyHandler extends HandlerWrapper {
         public void handle(String s, Request r, HttpServletRequest httpRequest, HttpServletResponse httpResponse) throws IOException, ServletException {
 
             int size = 10 * 1024;
