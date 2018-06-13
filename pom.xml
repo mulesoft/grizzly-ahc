@@ -6,7 +6,7 @@
         <version>5</version>
     </parent>
     <modelVersion>4.0.0</modelVersion>
-    <groupId>org.glassfish.grizzly</groupId>
+    <groupId>org.mule.glassfish.grizzly</groupId>
     <artifactId>grizzly-http-client</artifactId>
     <packaging>jar</packaging>
     <name>Grizzly Async HTTP Client</name>
@@ -83,17 +83,17 @@
     </licenses>
     <dependencies>
         <dependency>
-            <groupId>org.glassfish.grizzly</groupId>
+            <groupId>org.mule.glassfish.grizzly</groupId>
             <artifactId>connection-pool</artifactId>
             <version>${grizzly.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.glassfish.grizzly</groupId>
+            <groupId>org.mule.glassfish.grizzly</groupId>
             <artifactId>grizzly-websockets</artifactId>
             <version>${grizzly.version}</version>
         </dependency>
         <dependency>
-            <groupId>org.glassfish.grizzly</groupId>
+            <groupId>org.mule.glassfish.grizzly</groupId>
             <artifactId>grizzly-http-server</artifactId>
             <version>${grizzly.version}</version>
             <scope>test</scope>
@@ -474,7 +474,7 @@
 
     <properties>
         <additionalparam>-Xdoclint:none</additionalparam>
-        <grizzly.version>2.4.3</grizzly.version>
+        <grizzly.version>2.3.36-MULE-001-SNAPSHOT</grizzly.version>
         <maven.compiler.source>1.7</maven.compiler.source>
         <maven.compiler.target>1.7</maven.compiler.target>
         <surefire.version>2.12</surefire.version>

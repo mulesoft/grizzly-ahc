@@ -298,6 +298,15 @@ class ConnectionManager {
                 IS_NOT_KEEP_ALIVE.set(connection, Boolean.TRUE);
             }
         }
+
+		@Override
+		public GrizzlyFuture<Connection> connect(CompletionHandler<Connection> completionHandler) {
+            return (GrizzlyFuture<Connection>) connectorHandler.connect(
+                    buildRemoteSocketAddress(),
+                    localAddress != null
+                            ? new InetSocketAddress(localAddress, 0)
+                            : null, completionHandler);
+		}
     }
     
     private class NoSSLPoolCustomizer
