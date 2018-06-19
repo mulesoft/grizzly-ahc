@@ -305,7 +305,7 @@ class ConnectionManager {
                     buildRemoteSocketAddress(),
                     localAddress != null
                             ? new InetSocketAddress(localAddress, 0)
-                            : null, completionHandler);
+                            : null, completionHandler, true, true);
 		}
     }
     
