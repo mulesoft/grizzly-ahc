@@ -52,12 +52,12 @@ public class GrizzlyResponseHeaders extends HttpResponseHeaders {
         if (!initialized) {
             synchronized (headers) {
                 if (!initialized) {
-                    initialized = true;
                     final MimeHeaders headersLocal = response.getHeaders();
                     for (int i = 0; i < headersLocal.size(); i++) {
                         headers.add(headersLocal.getName(i).toString(Charsets.ASCII_CHARSET),
                                 headersLocal.getValue(i).toString(Charsets.ASCII_CHARSET));
                     }
+                    initialized = true;
                 }
             }
         }
