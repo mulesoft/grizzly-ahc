@@ -12,11 +12,18 @@
  */
 package com.ning.http.client.providers.grizzly.websocket;
 
+import static org.glassfish.grizzly.utils.Futures.completable;
+import static org.glassfish.grizzly.websockets.Utils.completedFrame;
+
 import com.ning.http.client.AsyncHttpProviderConfig;
 import com.ning.http.client.providers.grizzly.GrizzlyAsyncHttpProviderConfig;
 import com.ning.http.client.ws.WebSocket;
 import com.ning.http.client.ws.WebSocketListener;
 import com.ning.http.util.MiscUtils;
+
+import java.util.concurrent.CompletableFuture;
+
+import org.glassfish.grizzly.websockets.DataFrame;
 import org.glassfish.grizzly.websockets.ProtocolHandler;
 import org.glassfish.grizzly.websockets.SimpleWebSocket;
 
@@ -25,108 +32,145 @@ import org.glassfish.grizzly.websockets.SimpleWebSocket;
  */
 public final class GrizzlyWebSocketAdapter implements WebSocket {
 
-    /**
-     * Create new GrizzlyWebSocketAdapter instance.
-     * 
-     * @param config
-     * @param protocolHandler
-     * @return GrizzlyWebSocketAdapter
-     */
-    public static GrizzlyWebSocketAdapter newInstance(
-            final AsyncHttpProviderConfig<?, ?> config,
-            final ProtocolHandler protocolHandler) {
-        final SimpleWebSocket ws = new SimpleWebSocket(protocolHandler);
-        boolean bufferFragments = true;
-        if (config instanceof GrizzlyAsyncHttpProviderConfig) {
-            bufferFragments = (Boolean) ((GrizzlyAsyncHttpProviderConfig) config)
-                    .getProperty(GrizzlyAsyncHttpProviderConfig.Property.BUFFER_WEBSOCKET_FRAGMENTS);
-        }
-        
-        return new GrizzlyWebSocketAdapter(ws, bufferFragments);
-    }
-    
-    
-    final SimpleWebSocket gWebSocket;
-    final boolean bufferFragments;
-    // -------------------------------------------------------- Constructors
-
-    private GrizzlyWebSocketAdapter(final SimpleWebSocket gWebSocket,
-            final boolean bufferFragments) {
-        this.gWebSocket = gWebSocket;
-        this.bufferFragments = bufferFragments;
+  /**
+   * Create new GrizzlyWebSocketAdapter instance.
+   *
+   * @param config
+   * @param protocolHandler
+   * @return GrizzlyWebSocketAdapter
+   */
+  public static GrizzlyWebSocketAdapter newInstance(
+      final AsyncHttpProviderConfig<?, ?> config,
+      final ProtocolHandler protocolHandler) {
+    final SimpleWebSocket ws = new SimpleWebSocket(protocolHandler);
+    boolean bufferFragments = true;
+    if (config instanceof GrizzlyAsyncHttpProviderConfig) {
+      bufferFragments = (Boolean) ((GrizzlyAsyncHttpProviderConfig) config)
+          .getProperty(GrizzlyAsyncHttpProviderConfig.Property.BUFFER_WEBSOCKET_FRAGMENTS);
     }
 
-    public org.glassfish.grizzly.websockets.WebSocket getGrizzlyWebSocket() {
-        return gWebSocket;
+    return new GrizzlyWebSocketAdapter(ws, bufferFragments);
+  }
+
+
+  final SimpleWebSocket gWebSocket;
+  final boolean bufferFragments;
+  // -------------------------------------------------------- Constructors
+
+  private GrizzlyWebSocketAdapter(final SimpleWebSocket gWebSocket,
+                                  final boolean bufferFragments) {
+    this.gWebSocket = gWebSocket;
+    this.bufferFragments = bufferFragments;
+  }
+
+  public org.glassfish.grizzly.websockets.WebSocket getGrizzlyWebSocket() {
+    return gWebSocket;
+  }
+
+  // ------------------------------------------ Methods from AHC WebSocket
+  @Override
+  public WebSocket sendMessage(byte[] message) {
+    gWebSocket.send(message);
+    return this;
+  }
+
+  @Override
+  public CompletableFuture<DataFrame> completableSend(byte[] message) {
+    return completable(gWebSocket.send(message));
+  }
+
+  @Override
+  public WebSocket stream(byte[] fragment, boolean last) {
+    if (MiscUtils.isNonEmpty(fragment)) {
+      gWebSocket.stream(last, fragment, 0, fragment.length);
     }
-    
-    // ------------------------------------------ Methods from AHC WebSocket
-    @Override
-    public WebSocket sendMessage(byte[] message) {
-        gWebSocket.send(message);
-        return this;
+    return this;
+  }
+
+  @Override
+  public CompletableFuture<DataFrame> completableStream(byte[] fragment, boolean last) {
+    if (MiscUtils.isNonEmpty(fragment)) {
+      return completable(gWebSocket.stream(last, fragment, 0, fragment.length));
     }
 
-    @Override
-    public WebSocket stream(byte[] fragment, boolean last) {
-        if (MiscUtils.isNonEmpty(fragment)) {
-            gWebSocket.stream(last, fragment, 0, fragment.length);
-        }
-        return this;
+    return completedFrame(fragment, last);
+  }
+
+  @Override
+  public WebSocket stream(byte[] fragment, int offset, int len, boolean last) {
+    if (MiscUtils.isNonEmpty(fragment)) {
+      gWebSocket.stream(last, fragment, offset, len);
+    }
+    return this;
+  }
+
+  @Override
+  public CompletableFuture<DataFrame> completableStream(byte[] fragment, int offset, int len, boolean last) {
+    if (MiscUtils.isNonEmpty(fragment)) {
+      return completable(gWebSocket.stream(last, fragment, offset, len));
     }
 
-    @Override
-    public WebSocket stream(byte[] fragment, int offset, int len, boolean last) {
-        if (MiscUtils.isNonEmpty(fragment)) {
-            gWebSocket.stream(last, fragment, offset, len);
-        }
-        return this;
-    }
+    return completedFrame(fragment, last);
+  }
 
-    @Override
-    public WebSocket sendMessage(String message) {
-        gWebSocket.send(message);
-        return this;
-    }
+  @Override
+  public WebSocket sendMessage(String message) {
+    gWebSocket.send(message);
+    return this;
+  }
 
-    @Override
-    public WebSocket stream(String fragment, boolean last) {
-        gWebSocket.stream(last, fragment);
-        return this;
-    }
+  @Override
+  public CompletableFuture<DataFrame> completableSend(String message) {
+    return completable(gWebSocket.send(message));
+  }
 
-    @Override
-    public WebSocket sendPing(byte[] payload) {
-        gWebSocket.sendPing(payload);
-        return this;
-    }
+  @Override
+  public WebSocket stream(String fragment, boolean last) {
+    gWebSocket.stream(last, fragment);
+    return this;
+  }
 
-    @Override
-    public WebSocket sendPong(byte[] payload) {
-        gWebSocket.sendPong(payload);
-        return this;
-    }
+  @Override
+  public CompletableFuture<DataFrame> completableStream(String fragment, boolean last) {
+    return completable(gWebSocket.stream(last, fragment));
+  }
 
-    @Override
-    public WebSocket addWebSocketListener(WebSocketListener l) {
-        gWebSocket.add(new AHCWebSocketListenerAdapter(l, this));
-        return this;
-    }
+  @Override
+  public WebSocket sendPing(byte[] payload) {
+    gWebSocket.sendPing(payload);
+    return this;
+  }
 
-    @Override
-    public WebSocket removeWebSocketListener(WebSocketListener l) {
-        gWebSocket.remove(new AHCWebSocketListenerAdapter(l, this));
-        return this;
-    }
+  @Override
+  public WebSocket sendPong(byte[] payload) {
+    gWebSocket.sendPong(payload);
+    return this;
+  }
 
-    @Override
-    public boolean isOpen() {
-        return gWebSocket.isConnected();
-    }
+  @Override
+  public WebSocket addWebSocketListener(WebSocketListener l) {
+    gWebSocket.add(new AHCWebSocketListenerAdapter(l, this));
+    return this;
+  }
 
-    @Override
-    public void close() {
-        gWebSocket.close();
-    }
-    
-} // END GrizzlyWebSocketAdapter
+  @Override
+  public WebSocket removeWebSocketListener(WebSocketListener l) {
+    gWebSocket.remove(new AHCWebSocketListenerAdapter(l, this));
+    return this;
+  }
+
+  @Override
+  public boolean isOpen() {
+    return gWebSocket.isConnected();
+  }
+
+  @Override
+  public void close() {
+    gWebSocket.close();
+  }
+
+  @Override
+  public CompletableFuture<DataFrame> close(int code, String reason) {
+    return gWebSocket.completableClose(code, reason);
+  }
+}

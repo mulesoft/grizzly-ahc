@@ -13,99 +13,118 @@
 package com.ning.http.client.ws;
 
 import java.io.Closeable;
+import java.util.concurrent.CompletableFuture;
+
+import org.glassfish.grizzly.websockets.DataFrame;
 
 /**
  * A Websocket client
  */
 public interface WebSocket extends Closeable {
 
-    /**
-     * Send a byte message.
-     * @param message a byte message
-     * @return this
-     */
-    WebSocket sendMessage(byte[] message);
+  /**
+   * Send a byte message.
+   *
+   * @param message a byte message
+   * @return this
+   */
+  WebSocket sendMessage(byte[] message);
 
-    /**
-     * Allows streaming of multiple binary fragments.
-     * 
-     * @param fragment binary fragment.
-     * @param last     flag indicating whether or not this is the last fragment.
-     *             
-     * @return this.
-     */
-    WebSocket stream(byte[] fragment, boolean last);
+  CompletableFuture<DataFrame> completableSend(byte[] message);
 
-    /**
-     * Allows streaming of multiple binary fragments.
-     *
-     * @param fragment binary fragment.
-     * @param offset   starting offset.
-     * @param len      length.
-     * @param last     flag indicating whether or not this is the last fragment.
-     * @return this.
-     */
-    WebSocket stream(byte[] fragment, int offset, int len, boolean last);
+  /**
+   * Allows streaming of multiple binary fragments.
+   *
+   * @param fragment binary fragment.
+   * @param last     flag indicating whether or not this is the last fragment.
+   * @return this.
+   */
+  WebSocket stream(byte[] fragment, boolean last);
 
-    /**
-     * Send a text message
-     * @param message a text message
-     * @return this.
-     */
-    WebSocket sendMessage(String message);
+  CompletableFuture<DataFrame> completableStream(byte[] message, boolean last);
 
-    /**
-     * Allows streaming of multiple text fragments.
-     *
-     * @param fragment text fragment.
-     * @param last     flag indicating whether or not this is the last fragment.
-     * @return this.
-     */
-    WebSocket stream(String fragment, boolean last);
+  /**
+   * Allows streaming of multiple binary fragments.
+   *
+   * @param fragment binary fragment.
+   * @param offset   starting offset.
+   * @param len      length.
+   * @param last     flag indicating whether or not this is the last fragment.
+   * @return this.
+   */
+  WebSocket stream(byte[] fragment, int offset, int len, boolean last);
 
-    /**
-     * Send a <code>ping</ping> with an optional payload
-     * (limited to 125 bytes or less).
-     *
-     * @param payload the ping payload.
-     *
-     * @return this.
-     */
-    WebSocket sendPing(byte[] payload);
+  CompletableFuture<DataFrame> completableStream(byte[] fragment, int offset, int len, boolean last);
 
-    /**
-     * Send a <code>ping</ping> with an optional payload
-     * (limited to 125 bytes or less).
-     *
-     * @param payload the pong payload.
-     * @return this.
-     */
-    WebSocket sendPong(byte[] payload);
+  /**
+   * Send a text message
+   *
+   * @param message a text message
+   * @return this.
+   */
+  WebSocket sendMessage(String message);
 
-    /**
-     * Add a {@link WebSocketListener}
-     * @param l a {@link WebSocketListener}
-     * @return this
-     */
-    WebSocket addWebSocketListener(WebSocketListener l);
+  CompletableFuture<DataFrame> completableSend(String message);
 
-    /**
-     * Add a {@link WebSocketListener}
-     * @param l a {@link WebSocketListener}
-     * @return this
-     */
-    WebSocket removeWebSocketListener(WebSocketListener l);
+  /**
+   * Allows streaming of multiple text fragments.
+   *
+   * @param fragment text fragment.
+   * @param last     flag indicating whether or not this is the last fragment.
+   * @return this.
+   */
+  WebSocket stream(String fragment, boolean last);
 
-    /**
-     * Returns <code>true</code> if the WebSocket is open/connected.
-     *
-     * @return <code>true</code> if the WebSocket is open/connected.
-     */
-    boolean isOpen();
+  CompletableFuture<DataFrame> completableStream(String fragment, boolean last);
 
-    /**
-     * Close the WebSocket.
-     */
-    void close();
+  /**
+   * Send a <code>ping</ping> with an optional payload
+   * (limited to 125 bytes or less).
+   *
+   * @param payload the ping payload.
+   * @return this.
+   */
+  WebSocket sendPing(byte[] payload);
+
+  /**
+   * Send a <code>ping</ping> with an optional payload
+   * (limited to 125 bytes or less).
+   *
+   * @param payload the pong payload.
+   * @return this.
+   */
+  WebSocket sendPong(byte[] payload);
+
+  /**
+   * Add a {@link WebSocketListener}
+   *
+   * @param l a {@link WebSocketListener}
+   * @return this
+   */
+  WebSocket addWebSocketListener(WebSocketListener l);
+
+  /**
+   * Add a {@link WebSocketListener}
+   *
+   * @param l a {@link WebSocketListener}
+   * @return this
+   */
+  WebSocket removeWebSocketListener(WebSocketListener l);
+
+  /**
+   * Returns <code>true</code> if the WebSocket is open/connected.
+   *
+   * @return <code>true</code> if the WebSocket is open/connected.
+   */
+  boolean isOpen();
+
+  /**
+   * Close the WebSocket.
+   */
+  @Override
+  void close();
+
+  CompletableFuture<DataFrame> close(int code, String reason);
+
 }
 
