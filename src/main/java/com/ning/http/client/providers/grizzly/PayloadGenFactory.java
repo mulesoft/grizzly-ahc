@@ -274,15 +274,15 @@ final class PayloadGenFactory {
             final byte[] b = new byte[512];
             int read;
             final InputStream in = request.getStreamData();
-            try {
-                in.reset();
-            } catch (IOException ioe) {
-                if (LOGGER.isDebugEnabled()) {
-                    LOGGER.debug(ioe.toString(), ioe);
-                }
-            }
             if (in.markSupported()) {
-                in.mark(0);
+              try {
+                in.reset();
+              } catch (IOException ioe) {
+                if (LOGGER.isDebugEnabled()) {
+                  LOGGER.debug(ioe.toString(), ioe);
+                }
+              }
+              in.mark(0);
             }
 
             while ((read = in.read(b)) != -1) {
