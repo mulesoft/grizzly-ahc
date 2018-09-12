@@ -48,10 +48,17 @@ public class InputStreamBodyGenerator implements BodyGenerator {
 
     @Override
     public Body createBody() throws IOException {
-        if (inputStream.markSupported()) {
-          inputStream.mark(0);
+      if (inputStream.markSupported()) {
+        try {
           inputStream.reset();
+        } catch (IOException ioe) {
+          if (logger.isDebugEnabled()) {
+            logger.debug("Unable to reset the input stream: %s", ioe.getMessage());
+          }
         }
+
+        inputStream.mark(0);
+      }
         return new ISBody();
     }
 
