@@ -73,7 +73,7 @@ public class WebSocketUpgradeHandler implements UpgradeHandler<WebSocket>, Async
     public WebSocket onCompleted() throws Exception {
 
         if (status != 101) {
-            IllegalStateException e = new IllegalStateException("Invalid Status Code " + status);
+            IllegalStateException e = new BadStatusCodeException(status);
             for (WebSocketListener listener : listeners) {
                 listener.onError(e);
             }
