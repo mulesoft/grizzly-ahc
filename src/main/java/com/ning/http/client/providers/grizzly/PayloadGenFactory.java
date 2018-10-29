@@ -12,15 +12,19 @@
  */
 package com.ning.http.client.providers.grizzly;
 
+import static com.ning.http.util.MiscUtils.isNonEmpty;
+
 import com.ning.http.client.AsyncHandler;
 import com.ning.http.client.Body;
 import com.ning.http.client.BodyGenerator;
 import com.ning.http.client.Param;
 import com.ning.http.client.Request;
+import com.ning.http.client.generators.InputStreamBlockingBodyGenerator;
 import com.ning.http.client.listener.TransferCompletionHandler;
 import com.ning.http.client.multipart.MultipartBody;
 import com.ning.http.client.multipart.MultipartUtils;
 import com.ning.http.client.multipart.Part;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -28,7 +32,9 @@ import java.io.InputStream;
 import java.net.URLEncoder;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
+
 import org.glassfish.grizzly.Buffer;
+import org.glassfish.grizzly.CompletionHandler;
 import org.glassfish.grizzly.EmptyCompletionHandler;
 import org.glassfish.grizzly.FileTransfer;
 import org.glassfish.grizzly.WriteResult;
@@ -38,9 +44,6 @@ import org.glassfish.grizzly.http.HttpRequestPacket;
 import org.glassfish.grizzly.memory.Buffers;
 import org.glassfish.grizzly.memory.MemoryManager;
 import org.glassfish.grizzly.utils.Charsets;
-
-import static com.ning.http.client.providers.grizzly.PayloadGenerator.MAX_CHUNK_SIZE;
-import static com.ning.http.util.MiscUtils.isNonEmpty;
 
 /**
  * {@link PayloadGenerator} factory.
@@ -57,6 +60,7 @@ final class PayloadGenFactory {
                 new StreamDataPayloadGenerator(),
                 new PartsPayloadGenerator(), 
                 new FilePayloadGenerator(),
+                new BlockingBodyGeneratorAdapter(),
                 new BodyGeneratorAdapter()};
     
     public static PayloadGenerator wrapWithExpect(final PayloadGenerator generator) {
@@ -466,7 +470,7 @@ final class PayloadGenFactory {
     } // END FilePayloadGenerator
 
 
-    private static final class BodyGeneratorAdapter extends PayloadGenerator {
+    private static class BodyGeneratorAdapter extends PayloadGenerator {
 
         // -------------------------------------------- Methods from PayloadGenerator
 
@@ -522,11 +526,35 @@ final class PayloadGenFactory {
                 final HttpContent content =
                         requestPacket.httpContentBuilder().content(buffer).
                                 last(last).build();
-                ctx.write(content, ((!requestPacket.isCommitted()) ? ctx.getTransportContext().getCompletionHandler() : null));
+              write(ctx, content,  ((!requestPacket.isCommitted()) ? ctx.getTransportContext().getCompletionHandler() : null));
             }
             
             return true;
         }
 
-    } // END BodyGeneratorAdapter        
+      protected void write(FilterChainContext ctx, HttpContent content, CompletionHandler<WriteResult> completionHandler) {
+        ctx.write(content, completionHandler);
+      }
+
+    } // END BodyGeneratorAdapter
+
+
+  /**
+   * This version of a {@link BodyGeneratorAdapter} will block upon writing, so when the write queue is full more writes will not
+   * be triggered which could lead to OOM errors for large bodies.
+   */
+  private static final class BlockingBodyGeneratorAdapter extends BodyGeneratorAdapter {
+
+    // -------------------------------------------- Methods from PayloadGenerator
+
+
+    public boolean handlesPayloadType(final Request request) {
+      return (request.getBodyGenerator() != null) && request.getBodyGenerator() instanceof InputStreamBlockingBodyGenerator;
+    }
+
+    protected void write(FilterChainContext ctx, HttpContent content, CompletionHandler<WriteResult> completionHandler) {
+      ctx.write(content, completionHandler, true);
+    }
+
+  } // END BlockingBodyGeneratorAdapter
 }
