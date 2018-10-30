@@ -19,13 +19,11 @@ package com.ning.http.client.async;
 
 import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.AsyncHttpClientConfig;
-import com.ning.http.client.Response;
 
 import java.io.OutputStream;
 import java.net.ServerSocket;
 import java.net.Socket;
 import java.util.concurrent.CountDownLatch;
-import java.util.concurrent.Future;
 
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -50,11 +48,8 @@ public class SimultaneousReadingAndWritingNPETestCase extends AbstractBasicTest 
   public void testNPE() throws Exception {
     AsyncHttpClient client = getAsyncHttpClient(new AsyncHttpClientConfig.Builder().setAllowPoolingConnections(false).build());
     for (int i = 0; i < NUMBER_OF_REQUESTS; i++) {
-      Future<Response> responseFuture = client.prepareGet("http://localhost:" + port).execute();
-      Response response = responseFuture.get();
-      serverSocket.getClientLatch().countDown();
+      client.prepareGet("http://localhost:" + port).execute().get();
     }
-
   }
 
   @Override
@@ -66,7 +61,6 @@ public class SimultaneousReadingAndWritingNPETestCase extends AbstractBasicTest 
 
     private final int port;
     private final CountDownLatch latch = new CountDownLatch(1);
-    private final CountDownLatch clientLatch = new CountDownLatch(1);
 
     public TestServerSocket(int port) {
       this.port = port;
@@ -97,9 +91,7 @@ public class SimultaneousReadingAndWritingNPETestCase extends AbstractBasicTest 
           os.write("\n".getBytes());
           os.write("TEST".getBytes());
           os.flush();
-          // If a delay is applied, the exception never occurs.
-          // Thread.sleep(500);
-          clientLatch.await();
+          Thread.sleep(10);
           clientSocket.close();
         } catch (Exception e) {
           // Ignore.
@@ -111,8 +103,5 @@ public class SimultaneousReadingAndWritingNPETestCase extends AbstractBasicTest 
       return latch;
     }
 
-    public CountDownLatch getClientLatch() {
-      return clientLatch;
-    }
   }
 }
