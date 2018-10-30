@@ -52,6 +52,7 @@ public class SimultaneousReadingAndWritingNPETestCase extends AbstractBasicTest 
     for (int i = 0; i < NUMBER_OF_REQUESTS; i++) {
       Future<Response> responseFuture = client.prepareGet("http://localhost:" + port).execute();
       Response response = responseFuture.get();
+      serverSocket.getClientLatch().countDown();
     }
 
   }
@@ -65,6 +66,7 @@ public class SimultaneousReadingAndWritingNPETestCase extends AbstractBasicTest 
 
     private final int port;
     private final CountDownLatch latch = new CountDownLatch(1);
+    private final CountDownLatch clientLatch = new CountDownLatch(1);
 
     public TestServerSocket(int port) {
       this.port = port;
@@ -97,6 +99,7 @@ public class SimultaneousReadingAndWritingNPETestCase extends AbstractBasicTest 
           os.flush();
           // If a delay is applied, the exception never occurs.
           // Thread.sleep(500);
+          clientLatch.await();
           clientSocket.close();
         } catch (Exception e) {
           // Ignore.
@@ -106,6 +109,10 @@ public class SimultaneousReadingAndWritingNPETestCase extends AbstractBasicTest 
 
     public CountDownLatch getLatch() {
       return latch;
+    }
+
+    public CountDownLatch getClientLatch() {
+      return clientLatch;
     }
   }
 }
