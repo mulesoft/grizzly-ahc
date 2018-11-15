@@ -173,4 +173,8 @@ public final class GrizzlyWebSocketAdapter implements WebSocket {
   public CompletableFuture<DataFrame> close(int code, String reason) {
     return gWebSocket.completableClose(code, reason);
   }
+
+  public org.glassfish.grizzly.websockets.WebSocket getGrizzlyDelegate() {
+    return gWebSocket;
+  }
 }
