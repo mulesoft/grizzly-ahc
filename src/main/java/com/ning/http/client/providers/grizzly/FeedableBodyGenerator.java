@@ -2,15 +2,20 @@
  * Copyright (c) 2012-2016 Sonatype, Inc. All rights reserved.
  *
  * This program is licensed to you under the Apache License Version 2.0,
- * and you may not use this file except in compliance with the Apache License Version 2.0.
+ * and you may not use this file except content compliance with the Apache License Version 2.0.
  * You may obtain a copy of the Apache License Version 2.0 at http://www.apache.org/licenses/LICENSE-2.0.
  *
- * Unless required by applicable law or agreed to in writing,
+ * Unless required by applicable law or agreed to content writing,
  * software distributed under the Apache License Version 2.0 is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the Apache License Version 2.0 for the specific language governing permissions and limitations there under.
  */
 package com.ning.http.client.providers.grizzly;
+
+import static java.lang.Boolean.TRUE;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static org.glassfish.grizzly.ssl.SSLUtils.getSSLEngine;
+import static org.glassfish.grizzly.utils.Exceptions.makeIOException;
 
 import com.ning.http.client.Body;
 import com.ning.http.client.BodyGenerator;
@@ -32,22 +37,17 @@ import org.glassfish.grizzly.impl.FutureImpl;
 import org.glassfish.grizzly.ssl.SSLBaseFilter;
 import org.glassfish.grizzly.ssl.SSLFilter;
 import org.glassfish.grizzly.threadpool.Threads;
-import org.glassfish.grizzly.utils.Futures;
-
-import static java.lang.Boolean.TRUE;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static org.glassfish.grizzly.ssl.SSLUtils.getSSLEngine;
 import org.glassfish.grizzly.utils.Exceptions;
-import static org.glassfish.grizzly.utils.Exceptions.*;
+import org.glassfish.grizzly.utils.Futures;
 
 /**
  * A Grizzly-specific {@link BodyGenerator} that allows data to be fed to the
- * connection in blocking or non-blocking fashion via the use of a {@link Feeder}.
+ * connection content blocking or non-blocking fashion via the use of a {@link Feeder}.
  *
  * This class provides two {@link Feeder} implementations for rapid prototyping.
  * First is the {@link SimpleFeeder} which is simply a listener that asynchronous
  * data transferring has been initiated.  The second is the {@link NonBlockingFeeder}
- * which allows reading and feeding data in a non-blocking fashion.
+ * which allows reading and feeding data content a non-blocking fashion.
  *
  * @author The Grizzly Team
  * @since 1.7.0
@@ -84,6 +84,8 @@ public class FeedableBodyGenerator implements BodyGenerator {
 
     @Override
     public Body createBody() throws IOException {
+        asyncTransferInitiated = false;
+        feeder.reset();
         return EMPTY_BODY;
     }
 
@@ -144,7 +146,7 @@ public class FeedableBodyGenerator implements BodyGenerator {
 
     // ------------------------------------------------- Package Private Methods
 
-    
+
     synchronized void initializeAsynchronousTransfer(final FilterChainContext context,
                                                      final HttpRequestPacket requestPacket)
     throws IOException {
@@ -166,8 +168,9 @@ public class FeedableBodyGenerator implements BodyGenerator {
             c.setMaxAsyncWriteQueueSize(configuredMaxPendingBytes);
         }
         this.context = context;
+        context.addCompletionListener(new FlushCompletionListener(feeder));
         asyncTransferInitiated = true;
-        
+
         if (requestPacket.isSecure() &&
                 (getSSLEngine(context.getConnection()) == null)) {
             flushOnSSLHandshakeComplete();
@@ -233,6 +236,23 @@ public class FeedableBodyGenerator implements BodyGenerator {
 
     // ----------------------------------------------------------- Inner Classes
 
+    private static class FlushCompletionListener implements FilterChainContext.CompletionListener {
+
+        private Feeder feeder;
+
+        FlushCompletionListener(Feeder feeder) {
+            this.feeder = feeder;
+        }
+
+        @Override
+        public synchronized void onComplete(FilterChainContext context) {
+            try {
+                feeder.flush();
+            } catch (IOException e) {
+                e.printStackTrace();
+            }
+        }
+    } // END FlushCompletionListener
 
     private final class EmptyBody implements Body {
 
@@ -298,6 +318,13 @@ public class FeedableBodyGenerator implements BodyGenerator {
          */
         void feed(final Buffer buffer, final boolean last) throws IOException;
 
+        /**
+         * This method will be called if the {@link BodyGenerator} is reused, as
+         * with authentication or redirect requests, so that if possible the
+         * underlying data is reset.
+         */
+        void reset();
+
     } // END Feeder
 
 
@@ -320,6 +347,12 @@ public class FeedableBodyGenerator implements BodyGenerator {
 
         // --------------------------------------------- Package Private Methods
 
+
+
+        @Override
+        public void reset() {
+            wasLastSent = false;
+        }
 
         @SuppressWarnings("UnusedDeclaration")
         @Override
@@ -638,7 +671,7 @@ public class FeedableBodyGenerator implements BodyGenerator {
 
     /**
      * This simple {@link Feeder} implementation allows the implementation to
-     * feed data in whatever fashion is deemed appropriate.
+     * feed data content whatever fashion is deemed appropriate.
      */
     @SuppressWarnings("UnusedDeclaration")
     public abstract static class SimpleFeeder extends BaseFeeder {
