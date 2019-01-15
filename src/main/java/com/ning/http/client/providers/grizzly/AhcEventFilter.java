@@ -37,6 +37,7 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.concurrent.TimeUnit;
+
 import org.glassfish.grizzly.Buffer;
 import org.glassfish.grizzly.Connection;
 import org.glassfish.grizzly.filterchain.FilterChainContext;
@@ -58,6 +59,7 @@ import org.slf4j.LoggerFactory;
 import static com.ning.http.util.AsyncHttpProviderUtils.*;
 import static com.ning.http.util.MiscUtils.isNonEmpty;
 import org.glassfish.grizzly.EmptyCompletionHandler;
+
 /**
  * AHC {@link HttpClientFilter} implementation.
  * 
@@ -69,7 +71,7 @@ final class AhcEventFilter extends HttpClientFilter {
 
     private static final Map<Integer, StatusHandler> HANDLER_MAP =
             new HashMap<Integer, StatusHandler>(8);
-    
+
     private static IOException notKeepAliveReason;
     
     private final GrizzlyAsyncHttpProvider provider;
@@ -88,6 +90,7 @@ final class AhcEventFilter extends HttpClientFilter {
         HANDLER_MAP.put(HttpStatus.SEE_OTHER_303.getStatusCode(), RedirectHandler.INSTANCE);
         HANDLER_MAP.put(HttpStatus.TEMPORARY_REDIRECT_307.getStatusCode(), RedirectHandler.INSTANCE);
         HANDLER_MAP.put(HttpStatus.PERMANENT_REDIRECT_308.getStatusCode(), RedirectHandler.INSTANCE);
+
     }
 
     // --------------------------------------- Methods from HttpClientFilter
@@ -524,15 +527,15 @@ final class AhcEventFilter extends HttpClientFilter {
             try {
                 final boolean isContinueAuth;
                 
-                String ntlmAuthenticate = getNTLM(authHeaders);
+                String authMethodHeader = getHttpHeaderForAuthScheme(authHeaders, realm.getScheme().toString());
 
                 final Realm newRealm;
-                if (ntlmAuthenticate != null) {
+                if (authMethodHeader.startsWith(AuthScheme.NTLM.toString())) {
                     final Connection connection = ctx.getConnection();
                     // NTLM
                     // Connection-based auth
                     newRealm = ntlmChallenge(connection,
-                            ntlmAuthenticate,
+                            authMethodHeader,
                             req, realm, false);
                     isContinueAuth = !Utils.isNtlmEstablished(connection);
                     if (isContinueAuth)
@@ -546,15 +549,13 @@ final class AhcEventFilter extends HttpClientFilter {
                 } else {
                     // Request-based auth
                     isContinueAuth = false;
-                    
-                    final String firstAuthHeader = authHeaders.get(0);
 
                     newRealm = new Realm.RealmBuilder()
                             .clone(realm)
                             .setUri(req.getUri())
                             .setMethodName(req.getMethod())
                             .setUsePreemptiveAuth(true)
-                            .parseWWWAuthenticateHeader(firstAuthHeader)
+                            .parseWWWAuthenticateHeader(authMethodHeader)
                             .build();
                 }
 

@@ -207,6 +207,19 @@ public class AsyncHttpProviderUtils {
         return null;
     }
 
+    public static String getHttpHeaderForAuthScheme(List<String> authenticationHeaders, String authScheme)
+    {
+        for (String authenticateHeader : authenticationHeaders)
+        {
+            {
+                if (authenticateHeader.toUpperCase().startsWith(authScheme.toUpperCase())) {
+                    return authenticateHeader;
+                }
+            }
+        }
+        return authenticationHeaders.get(0);
+    }
+
     public static boolean isWebSocket(String scheme) {
         return WEBSOCKET.equals(scheme) || WEBSOCKET_SSL.equalsIgnoreCase(scheme);
     }
