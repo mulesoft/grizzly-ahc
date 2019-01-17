@@ -12,6 +12,11 @@
  */
 package com.ning.http.client.providers.grizzly;
 
+import static com.ning.http.util.AsyncHttpProviderUtils.getNTLM;
+import static com.ning.http.util.AsyncHttpProviderUtils.isSameHostAndProtocol;
+import static com.ning.http.util.AuthenticatorUtils.getHttpHeaderForAuthScheme;
+import static com.ning.http.util.MiscUtils.isNonEmpty;
+
 import com.ning.http.client.providers.grizzly.events.GracefulCloseEvent;
 import com.ning.http.client.providers.grizzly.websocket.GrizzlyWebSocketAdapter;
 import com.ning.http.client.AsyncHandler;
@@ -55,9 +60,6 @@ import org.glassfish.grizzly.utils.IdleTimeoutFilter;
 import org.glassfish.grizzly.websockets.WebSocketHolder;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-
-import static com.ning.http.util.AsyncHttpProviderUtils.*;
-import static com.ning.http.util.MiscUtils.isNonEmpty;
 import org.glassfish.grizzly.EmptyCompletionHandler;
 
 /**
@@ -527,7 +529,7 @@ final class AhcEventFilter extends HttpClientFilter {
             try {
                 final boolean isContinueAuth;
                 
-                String authMethodHeader = getHttpHeaderForAuthScheme(authHeaders, realm.getScheme().toString());
+                String authMethodHeader = getHttpHeaderForAuthScheme(authHeaders, realm.getScheme().name());
 
                 final Realm newRealm;
                 if (authMethodHeader.startsWith(AuthScheme.NTLM.toString())) {
