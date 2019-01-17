@@ -12,6 +12,7 @@
  */
 package com.ning.http.client.providers.grizzly;
 
+import static com.ning.http.client.Realm.AuthScheme.NTLM;
 import static com.ning.http.util.AsyncHttpProviderUtils.getNTLM;
 import static com.ning.http.util.AsyncHttpProviderUtils.isSameHostAndProtocol;
 import static com.ning.http.util.AuthenticatorUtils.getHttpHeaderForAuthScheme;
@@ -532,7 +533,7 @@ final class AhcEventFilter extends HttpClientFilter {
                 String authMethodHeader = getHttpHeaderForAuthScheme(authHeaders, realm.getScheme().name());
 
                 final Realm newRealm;
-                if (authMethodHeader.startsWith(AuthScheme.NTLM.toString())) {
+                if (authMethodHeader.startsWith(NTLM.name())) {
                     final Connection connection = ctx.getConnection();
                     // NTLM
                     // Connection-based auth
