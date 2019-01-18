@@ -20,7 +20,10 @@ import static com.ning.http.client.Realm.AuthScheme.NTLM;
 import static org.eclipse.jetty.http.HttpHeader.WWW_AUTHENTICATE;
 import static org.eclipse.jetty.http.HttpHeader.AUTHORIZATION;
 import static java.util.concurrent.TimeUnit.SECONDS;
+import static javax.servlet.http.HttpServletResponse.SC_OK;
 import static org.eclipse.jetty.util.security.Constraint.__BASIC_AUTH;
+import static org.eclipse.jetty.server.Authentication.SEND_CONTINUE;
+import static javax.servlet.http.HttpServletResponse.SC_UNAUTHORIZED;
 
 import java.io.IOException;
 import java.util.ArrayList;
@@ -134,7 +137,7 @@ public class MultipleAuthenticationMethodsSupportedTest extends AbstractBasicTes
             Response resp = f.get(60, SECONDS);
 
             assertNotNull(resp);
-            assertEquals(resp.getStatusCode(), HttpServletResponse.SC_OK);
+            assertEquals(resp.getStatusCode(), SC_OK);
             assertNotNull(resp.getHeader(AUTH_HEADER_NAME));
         }
     }
@@ -148,7 +151,7 @@ public class MultipleAuthenticationMethodsSupportedTest extends AbstractBasicTes
             Response resp = f.get(60, SECONDS);
 
             assertNotNull(resp);
-            assertEquals(resp.getStatusCode(), HttpServletResponse.SC_UNAUTHORIZED);
+            assertEquals(resp.getStatusCode(), SC_UNAUTHORIZED);
             assertNotNull(resp.getHeader(WWW_AUTHENTICATE.toString()));
         }
     }
@@ -156,16 +159,16 @@ public class MultipleAuthenticationMethodsSupportedTest extends AbstractBasicTes
     private class MyDigestAuthenticator extends DigestAuthenticator {
         public Authentication validateRequest(ServletRequest req, ServletResponse res, boolean mandatory) throws ServerAuthException {
             HttpServletRequest request = (HttpServletRequest)req;
-            String wwwAuthHeader = ((HttpServletRequest) req).getHeader(WWW_AUTHENTICATE.asString());
-            String authHeader = ((HttpServletRequest) req).getHeader(AUTHORIZATION.asString());
+            String wwwAuthHeader = ((HttpServletRequest) req).getHeader(WWW_AUTHENTICATE.name());
+            String authHeader = ((HttpServletRequest) req).getHeader(AUTHORIZATION.name());
             if(wwwAuthHeader == null && authHeader == null) {
                 try {
                     HttpServletResponse response = (HttpServletResponse)res;
-                    response.setHeader(WWW_AUTHENTICATE.asString(), "Basic realm=\"" + TEST_REALM + "\"");
-                    response.addHeader(WWW_AUTHENTICATE.asString(), "Digest realm=\"" + TEST_REALM + "\", domain=\"/\", nonce=\"" + this.newNonce((Request)request) + "\", algorithm=MD5, qop=\"auth\", stale=false");
-                    response.addHeader(WWW_AUTHENTICATE.asString(), NTLM.toString());
-                    response.sendError(HttpServletResponse.SC_UNAUTHORIZED);
-                    return Authentication.SEND_CONTINUE;
+                    response.setHeader(WWW_AUTHENTICATE.toString(), "Basic realm=\"" + TEST_REALM + "\"");
+                    response.addHeader(WWW_AUTHENTICATE.toString(), "Digest realm=\"" + TEST_REALM + "\", domain=\"/\", nonce=\"" + this.newNonce((Request)request) + "\", algorithm=MD5, qop=\"auth\", stale=false");
+                    response.addHeader(WWW_AUTHENTICATE.toString(), NTLM.name());
+                    response.sendError(SC_UNAUTHORIZED);
+                    return SEND_CONTINUE;
                 } catch (IOException var14) {
                     throw new ServerAuthException(var14);
                 }

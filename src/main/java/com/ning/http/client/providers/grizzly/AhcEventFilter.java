@@ -93,7 +93,6 @@ final class AhcEventFilter extends HttpClientFilter {
         HANDLER_MAP.put(HttpStatus.SEE_OTHER_303.getStatusCode(), RedirectHandler.INSTANCE);
         HANDLER_MAP.put(HttpStatus.TEMPORARY_REDIRECT_307.getStatusCode(), RedirectHandler.INSTANCE);
         HANDLER_MAP.put(HttpStatus.PERMANENT_REDIRECT_308.getStatusCode(), RedirectHandler.INSTANCE);
-
     }
 
     // --------------------------------------- Methods from HttpClientFilter

@@ -217,11 +217,12 @@ public final class AuthenticatorUtils {
     }
 
     public static String getHttpHeaderForAuthScheme(List<String> authenticationHeaders, String authScheme) {
-        if (authenticationHeaders.size() == 1 || authScheme == "NONE") {
+        if (authenticationHeaders.size() == 1 || "NONE".equals(authScheme)) {
             return authenticationHeaders.get(0);
         }
+        int authLen = authScheme.length();
         for (String authenticateHeader : authenticationHeaders) {
-            if (authenticateHeader.length() >= authScheme.length() && authenticateHeader.substring(0,authScheme.length()).equalsIgnoreCase(authScheme)){
+            if (authenticateHeader.length() >= authLen && authenticateHeader.substring(0,authLen).equalsIgnoreCase(authScheme)){
                 return authenticateHeader;
             }
         }
