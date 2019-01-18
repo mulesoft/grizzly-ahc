@@ -222,7 +222,7 @@ public final class AuthenticatorUtils {
         }
         int authLen = authScheme.length();
         for (String authenticateHeader : authenticationHeaders) {
-            if (authenticateHeader.length() >= authLen && authenticateHeader.substring(0,authLen).equalsIgnoreCase(authScheme)){
+            if (authenticateHeader.length() >= authLen && authenticateHeader.substring(0, authLen).equalsIgnoreCase(authScheme)){
                 return authenticateHeader;
             }
         }
