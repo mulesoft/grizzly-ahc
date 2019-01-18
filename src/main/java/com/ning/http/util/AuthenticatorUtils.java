@@ -17,16 +17,16 @@ import static com.ning.http.util.AsyncHttpProviderUtils.getNonEmptyPath;
 import static com.ning.http.util.AsyncHttpProviderUtils.getNTLM;
 import static com.ning.http.util.MiscUtils.isNonEmpty;
 
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.util.List;
+
 import com.ning.http.client.ProxyServer;
 import com.ning.http.client.Realm;
 import com.ning.http.client.Request;
 import com.ning.http.client.ntlm.NTLMEngine;
 import com.ning.http.client.spnego.SpnegoEngine;
 import com.ning.http.client.uri.Uri;
-import java.io.IOException;
-
-import java.nio.charset.Charset;
-import java.util.List;
 
 public final class AuthenticatorUtils {
     private static final String PROXY_AUTH_HEADER = "Proxy-Authorization";
@@ -214,5 +214,18 @@ public final class AuthenticatorUtils {
             builder.append(value);
 
         return builder.append(", ");
+    }
+
+    public static String getHttpHeaderForAuthScheme(List<String> authenticationHeaders, String authScheme) {
+        if (authenticationHeaders.size() == 1 || "NONE".equals(authScheme)) {
+            return authenticationHeaders.get(0);
+        }
+        int authLen = authScheme.length();
+        for (String authenticateHeader : authenticationHeaders) {
+            if (authenticateHeader.length() >= authLen && authenticateHeader.substring(0, authLen).equalsIgnoreCase(authScheme)){
+                return authenticateHeader;
+            }
+        }
+        return authenticationHeaders.get(0);
     }
 }
