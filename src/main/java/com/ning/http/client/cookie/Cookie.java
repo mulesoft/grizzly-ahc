@@ -14,6 +14,9 @@ package com.ning.http.client.cookie;
 
 public class Cookie {
 
+    protected long whenCreated = 0;
+    protected static final long UNDEFINED_MAX_AGE = -9223372036854775808L;
+
     /**
      * @param expires parameter will be ignored.
      * Use the other factory that don't take an expires.
@@ -111,6 +114,7 @@ public class Cookie {
         this.maxAge = maxAge;
         this.secure = secure;
         this.httpOnly = httpOnly;
+        this.whenCreated = System.currentTimeMillis();
     }
 
     public String getDomain() {
@@ -179,5 +183,20 @@ public class Cookie {
             buf.append("; HTTPOnly");
         }
         return buf.toString();
+    }
+
+    public boolean hasCookieExpired() {
+        // if not specify max-age, this cookie should be discarded when user agent is to be closed, but it is not expired.
+        if (this.maxAge < 0){
+            return false;
+        }
+        if (this.maxAge == 0){
+            return true;
+        }
+        if (this.whenCreated > 0) {
+            long deltaSecond = (System.currentTimeMillis() - this.whenCreated) / 1000;
+            return deltaSecond > this.maxAge;
+        }
+        return false;
     }
 }
