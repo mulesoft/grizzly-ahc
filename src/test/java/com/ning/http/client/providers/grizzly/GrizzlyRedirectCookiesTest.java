@@ -1,24 +1,29 @@
 package com.ning.http.client.providers.grizzly;
 
 import static java.util.Collections.list;
+import static org.testng.Assert.assertEquals;
+import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static java.util.concurrent.TimeUnit.SECONDS;
 import static com.ning.http.client.Realm.AuthScheme.BASIC;
+import static javax.servlet.http.HttpServletResponse.SC_UNAUTHORIZED;
+import static javax.servlet.http.HttpServletResponse.SC_OK;
+import static javax.servlet.http.HttpServletResponse.SC_PROXY_AUTHENTICATION_REQUIRED;
 import static org.eclipse.jetty.util.security.Constraint.__BASIC_AUTH;
-import static org.hamcrest.core.Is.is;
+import static org.eclipse.jetty.http.HttpStatus.OK_200;
+import static org.eclipse.jetty.http.HttpStatus.FOUND_302;
 import static org.eclipse.jetty.http.HttpHeader.AUTHORIZATION;
+import static org.eclipse.jetty.http.HttpHeader.PROXY_AUTHORIZATION;
+import static org.eclipse.jetty.http.HttpHeader.PROXY_AUTHENTICATE;
 import static org.eclipse.jetty.http.HttpHeader.WWW_AUTHENTICATE;
 import static org.eclipse.jetty.http.HttpHeader.LOCATION;
 import static org.eclipse.jetty.http.HttpHeader.COOKIE;
 
-import static org.eclipse.jetty.http.HttpStatus.OK_200;
-import static org.eclipse.jetty.http.HttpStatus.FOUND_302;
-
-
 import java.util.HashSet;
-import com.ning.http.client.Realm;
-import com.ning.http.client.Response;
+import java.util.concurrent.Future;
 import com.ning.http.client.AsyncHttpClient;
-import com.ning.http.client.AsyncHttpClientConfig;
+import com.ning.http.client.Realm.RealmBuilder;
+import com.ning.http.client.Response;
+import com.ning.http.client.ProxyServer;
 import com.ning.http.client.async.AbstractBasicTest;
 import org.eclipse.jetty.security.LoginService;
 import org.eclipse.jetty.security.HashLoginService;
@@ -28,12 +33,10 @@ import org.eclipse.jetty.security.authentication.BasicAuthenticator;
 import org.eclipse.jetty.server.Server;
 import org.eclipse.jetty.server.ServerConnector;
 import org.eclipse.jetty.server.handler.AbstractHandler;
+import org.eclipse.jetty.util.B64Code;
 import org.eclipse.jetty.util.security.Constraint;
-import static org.testng.Assert.assertEquals;
-
-import org.testng.annotations.BeforeClass;
-import org.testng.annotations.BeforeTest;
-import org.testng.annotations.Test;
+import com.ning.http.client.AsyncHttpClient.BoundRequestBuilder;
+import com.ning.http.client.AsyncHttpClientConfig;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.Cookie;
@@ -45,25 +48,29 @@ import java.util.ArrayList;
 import java.util.Set;
 import java.util.Map;
 import java.util.HashMap;
-import java.util.concurrent.Future;
-
+import org.testng.annotations.BeforeClass;
+import org.testng.annotations.BeforeTest;
+import org.testng.annotations.Test;
 
 public class GrizzlyRedirectCookiesTest extends AbstractBasicTest {
     protected static final String REDIRECT_PATH = "/redirect";
     protected static final String AUTH_PATH = "/auth";
     protected static final String BASE_PATH = "/foo/test";
     protected static final String FINAL_PATH = "/final";
-    protected static final String user = "user";
-    protected static final String admin = "admin";
+    protected static final String TEST_USER = "user";
+    protected static final String TEST_ADMIN = "admin";
+    protected static final String TEST_PROXY_USER = "proxy_user";
+    protected static final String TEST_PROXY_ADMIN = "proxy_pass";
     protected static final String TEST_REALM = "MyRealm";
-
+    protected static final String HOST = "127.0.0.1";
     protected static final String GLOBAL_REQUEST_TIMEOUT = "50000";
 
+    protected static Server proxyServer;
     private static Set<String> cookiesReceived = new HashSet<>();
     private static List<Cookie> cookieJar = new ArrayList<>();
 
     public enum TestCookie {
-        VALID_COOKIE("MyWorkingCookie", "workingvalue", FINAL_PATH, 10),
+        VALID_COOKIE("MyWorkingCookie", "workingvalue", FINAL_PATH, 1000),
         EXPIRED_COOKIE("MyExpiredCookie", "deleted", FINAL_PATH, 0);
 
         private Cookie cookie;
@@ -95,31 +102,44 @@ public class GrizzlyRedirectCookiesTest extends AbstractBasicTest {
                 .setRequestTimeout(Integer.valueOf(GLOBAL_REQUEST_TIMEOUT))
                 .setFollowRedirect(true)
                 .build();
-        assertFilteredCookies(config, REDIRECT_PATH);
+        assertFilteredCookies(config, getTargetUrl() + REDIRECT_PATH);
     }
 
     @Test
-    public void grizzlyClientOnUnauthorizedFilterExpiredCookies() throws Exception {
+    public void grizzlyClientOnAuthenticationFilterExpiredCookies() throws Exception {
         AsyncHttpClientConfig config = new AsyncHttpClientConfig.Builder()
                 .setRequestTimeout(Integer.valueOf(GLOBAL_REQUEST_TIMEOUT))
                 .setFollowRedirect(true)
-                .setRealm(new Realm.RealmBuilder().setPrincipal(user).setPassword(admin).setRealmName(TEST_REALM).setScheme(BASIC).build())
+                .setRealm(new RealmBuilder()
+                        .setPrincipal(TEST_USER)
+                        .setPassword(TEST_ADMIN)
+                        .setRealmName(TEST_REALM)
+                        .setScheme(BASIC).build())
                 .build();
-        assertFilteredCookies(config, AUTH_PATH);
+        assertFilteredCookies(config, getTargetUrl() + AUTH_PATH);
     }
 
-    private void assertFilteredCookies(AsyncHttpClientConfig config, String path) throws Exception {
-        fillCookieJar();
+    @Test
+    public void grizzlyClientOnProxyAuthenticationFilterExpiredCookies() throws Exception {
+        AsyncHttpClientConfig config = new AsyncHttpClientConfig.Builder()
+                .setProxyServer(basicProxy())
+                .setRealm(new RealmBuilder()
+                        .setPrincipal(TEST_USER)
+                        .setPassword(TEST_ADMIN)
+                        .setScheme(BASIC)
+                        .setUsePreemptiveAuth(false).build())
+                .build();
+        assertFilteredCookies(config, getTargetUrl() + AUTH_PATH);
+    }
 
+    private void assertFilteredCookies(AsyncHttpClientConfig config, String uri) throws Exception {
+        fillCookieJar();
         Set<String> expectedCookies = new HashSet<>();
         expectedCookies.add(TestCookie.VALID_COOKIE.toString());
-
         try (AsyncHttpClient client = getAsyncHttpClient(config)) {
-            AsyncHttpClient.BoundRequestBuilder r = client.prepareGet(getTargetUrl() + path);
-
-            Future<Response> f = r.execute();
+            BoundRequestBuilder request = client.prepareGet(uri);
+            Future<Response> f = request.execute();
             f.get(60, SECONDS);
-
             assertEquals(cookiesReceived, expectedCookies);
         }
     }
@@ -142,14 +162,12 @@ public class GrizzlyRedirectCookiesTest extends AbstractBasicTest {
         MockRequestInterceptor deflectRequest = (httpResponse, request, path) -> {
                 httpResponse.setStatus(FOUND_302);
                 httpResponse.setHeader(LOCATION.asString(), path);
-                //for (Cookie cookie: cookieJar) { httpResponse.addCookie(cookie); }
             };
 
         MockRequestInterceptor acceptRequest = (httpResponse, request, path) -> {
                 httpResponse.setStatus(OK_200);
                 cookiesReceived.addAll(list(request.getHeaders(COOKIE.toString())));
             };
-
 
         public MyResponseHandler() {
             REDIRECT_MAP.put(BASE_PATH + REDIRECT_PATH, deflectRequest);
@@ -170,11 +188,6 @@ public class GrizzlyRedirectCookiesTest extends AbstractBasicTest {
     }
 
     @Override
-    public AbstractHandler configureHandler() throws Exception {
-        return new MyResponseHandler();
-    }
-
-    @Override
     public AsyncHttpClient getAsyncHttpClient(AsyncHttpClientConfig config) {
         return new AsyncHttpClient(config);
     }
@@ -182,55 +195,112 @@ public class GrizzlyRedirectCookiesTest extends AbstractBasicTest {
     @BeforeClass(alwaysRun = true)
     @Override
     public void setUpGlobal() throws Exception {
-            server = new Server();
-            port1 = findFreePort();
+        server = new Server();
+        proxyServer = new Server();
 
-            ServerConnector listener = new ServerConnector(server);
-            listener.setHost("127.0.0.1");
-            listener.setPort(port1);
+        port1 = findFreePort();
+        port2 = findFreePort();
 
-            server.addConnector(listener);
+        ServerConnector listener = new ServerConnector(server);
 
-            LoginService loginService = new HashLoginService(TEST_REALM, "src/test/resources/realm.properties");
-            server.addBean(loginService);
+        // Server configuration
+        listener.setHost(HOST);
+        listener.setPort(port1);
+        server.addConnector(listener);
+        setBasicAuthSecurityHandler();
 
-            Constraint constraint = new Constraint();
-            constraint.setName(__BASIC_AUTH);
-            constraint.setRoles(new String[]{user, admin});
-            constraint.setAuthenticate(true);
+        listener = new ServerConnector(proxyServer);
 
-            ConstraintMapping mapping = new ConstraintMapping();
-            mapping.setConstraint(constraint);
-            mapping.setPathSpec(BASE_PATH + AUTH_PATH);
+        // Proxy Server configuration
+        listener.setHost(HOST);
+        listener.setPort(port2);
+        proxyServer.addConnector(listener);
+        proxyServer.setHandler(new ProxyHTTPHandler());
+        proxyServer.start();
 
-            List<ConstraintMapping> cm = new ArrayList<>();
-            cm.add(mapping);
-
-            Set<String> knownRoles = new HashSet<>();
-            knownRoles.add(user);
-            knownRoles.add(admin);
-
-            ConstraintSecurityHandler security = new ConstraintSecurityHandler() {
-                @Override
-                public void handle(String arg0, org.eclipse.jetty.server.Request req, HttpServletRequest serReq, HttpServletResponse serRes) throws IOException, ServletException {
-                    System.err.println("request in security handler");
-                    System.err.println("Authorization: " + serReq.getHeader("Authorization"));
-                    System.err.println("RequestUri: " + serReq.getRequestURI());
-                    if (serReq.getHeader(WWW_AUTHENTICATE.asString()) == null && serReq.getHeader(AUTHORIZATION.asString()) == null){
-                        for (Cookie cookie : cookieJar) {
-                            serRes.addCookie(cookie);
-                        }
-                    }
-                    super.handle(arg0, req, serReq, serRes);
-                }
-            };
-            security.setConstraintMappings(cm, knownRoles);
-            security.setAuthenticator(new BasicAuthenticator());
-            security.setLoginService(loginService);
-
-            security.setHandler(configureHandler());
-            server.setHandler(security);
-            server.start();
+        server.start();
     }
 
+    private void setBasicAuthSecurityHandler() throws Exception {
+        LoginService loginService = new HashLoginService(TEST_REALM, "src/test/resources/realm.properties");
+        server.addBean(loginService);
+
+        Constraint constraint = new Constraint();
+        constraint.setName(__BASIC_AUTH);
+        constraint.setRoles(new String[]{TEST_USER, TEST_ADMIN});
+        constraint.setAuthenticate(true);
+
+        ConstraintMapping mapping = new ConstraintMapping();
+        mapping.setConstraint(constraint);
+        mapping.setPathSpec(BASE_PATH + AUTH_PATH);
+
+        List<ConstraintMapping> cm = new ArrayList<>();
+        cm.add(mapping);
+
+        Set<String> knownRoles = new HashSet<>();
+        knownRoles.add(TEST_USER);
+        knownRoles.add(TEST_ADMIN);
+
+        ConstraintSecurityHandler security = new ConstraintSecurityHandler() {
+            @Override
+            public void handle(String pathInContext, org.eclipse.jetty.server.Request req, HttpServletRequest serReq,
+                               HttpServletResponse serRes) throws IOException, ServletException {
+                if (serReq.getHeader(WWW_AUTHENTICATE.asString()) == null && serReq.getHeader(AUTHORIZATION.asString()) == null){
+                    for (Cookie cookie : cookieJar) {
+                        serRes.addCookie(cookie);
+                    }
+                }
+                super.handle(pathInContext, req, serReq, serRes);
+            }
+        };
+
+        security.setConstraintMappings(cm, knownRoles);
+        security.setAuthenticator(new BasicAuthenticator());
+        security.setLoginService(loginService);
+        security.setHandler(configureHandler());
+        server.setHandler(security);
+    }
+
+    private static class ProxyHTTPHandler extends AbstractHandler {
+
+        @Override
+        public void handle(String pathInContext, org.eclipse.jetty.server.Request request, HttpServletRequest httpRequest,
+                           HttpServletResponse httpResponse) throws IOException, ServletException {
+
+            String authorization = httpRequest.getHeader(AUTHORIZATION.asString());
+            String proxyAuthorization = httpRequest.getHeader(PROXY_AUTHORIZATION.asString());
+            String authCred = B64Code.encode(TEST_USER + ":" + TEST_ADMIN, ISO_8859_1);
+            String proxyAuthCred = B64Code.encode(TEST_PROXY_USER + ":" + TEST_PROXY_ADMIN, ISO_8859_1);
+
+            if (proxyAuthorization == null)  {
+                httpResponse.setStatus(SC_PROXY_AUTHENTICATION_REQUIRED);
+                httpResponse.setHeader(PROXY_AUTHENTICATE.asString(), String.format("Basic realm=\"%s\"", TEST_REALM));
+            } else if (proxyAuthorization.equals(String.format("Basic %s", proxyAuthCred))
+                    && authorization != null && authorization.equals(String.format("Basic %s", authCred))) {
+                httpResponse.addHeader("target", request.getHttpURI().getPath());
+                cookiesReceived.addAll(list(request.getHeaders(COOKIE.toString())));
+                httpResponse.setStatus(SC_OK);
+            } else {
+                httpResponse.setStatus(SC_UNAUTHORIZED);
+                httpResponse.setHeader(WWW_AUTHENTICATE.asString(), String.format("Basic realm=\"%s\"", TEST_REALM));
+                for (Cookie cookie : cookieJar) {
+                    httpResponse.addCookie(cookie);
+                }
+            }
+            httpResponse.getOutputStream().flush();
+            httpResponse.getOutputStream().close();
+            request.setHandled(true);
+        }
+    }
+
+    @Override
+    public AbstractHandler configureHandler() throws Exception {
+        return new MyResponseHandler();
+    }
+
+    private ProxyServer basicProxy() {
+        ProxyServer proxyServer = new ProxyServer(HOST, port2, TEST_PROXY_USER, TEST_PROXY_ADMIN);
+        proxyServer.setScheme(BASIC);
+        return proxyServer;
+    }
 }

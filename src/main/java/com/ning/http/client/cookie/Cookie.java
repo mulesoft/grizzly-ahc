@@ -12,10 +12,11 @@
  */
 package com.ning.http.client.cookie;
 
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+
 public class Cookie {
 
-    protected long whenCreated = 0;
-    protected static final long UNDEFINED_MAX_AGE = -9223372036854775808L;
+    protected long whenCreated;
 
     /**
      * @param expires parameter will be ignored.
@@ -186,7 +187,8 @@ public class Cookie {
     }
 
     public boolean hasCookieExpired() {
-        // if not specify max-age, this cookie should be discarded when user agent is to be closed, but it is not expired.
+        // if not specify max-age, this cookie should be discarded when user agent is to be closed,
+        // but it is not expired.
         if (this.maxAge < 0){
             return false;
         }
@@ -194,7 +196,7 @@ public class Cookie {
             return true;
         }
         if (this.whenCreated > 0) {
-            long deltaSecond = (System.currentTimeMillis() - this.whenCreated) / 1000;
+            long deltaSecond =  MILLISECONDS.toSeconds(System.currentTimeMillis() - this.whenCreated);
             return deltaSecond > this.maxAge;
         }
         return false;
