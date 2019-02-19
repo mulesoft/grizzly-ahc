@@ -52,7 +52,6 @@ public abstract class RequestBuilderBase<T extends RequestBuilderBase<T>> {
         private InetAddress address;
         private InetAddress localAddress;
         private FluentCaseInsensitiveStringsMap headers = new FluentCaseInsensitiveStringsMap();
-        //private ArrayList<Cookie> cookies;
         private GrizzlyCookieStore cookieStore = new GrizzlyCookieStore();
         private byte[] byteData;
         private List<byte[]> compositeByteData;

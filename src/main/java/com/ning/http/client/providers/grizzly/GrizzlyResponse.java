@@ -19,13 +19,9 @@ import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
-import java.util.ArrayList;
-import java.util.Collections;
 import java.util.List;
 
 import org.glassfish.grizzly.Buffer;
-import org.glassfish.grizzly.http.Cookies;
-import org.glassfish.grizzly.http.CookiesBuilder;
 import org.glassfish.grizzly.memory.Buffers;
 import org.glassfish.grizzly.memory.MemoryManager;
 import org.glassfish.grizzly.utils.BufferInputStream;
@@ -35,7 +31,6 @@ import com.ning.http.client.HttpResponseBodyPart;
 import com.ning.http.client.HttpResponseHeaders;
 import com.ning.http.client.HttpResponseStatus;
 import com.ning.http.client.ResponseBase;
-import com.ning.http.client.cookie.Cookie;
 import org.glassfish.grizzly.http.HttpResponsePacket;
 
 /**
@@ -144,43 +139,7 @@ public class GrizzlyResponse extends ResponseBase {
         return responseBody.toByteBuffer();
     }
 
-    @Override
-    protected List<Cookie> buildCookies() {
-        List<String> values = headers.getHeaders().get("set-cookie");
-        if (isNonEmpty(values)) {
-            CookiesBuilder.ServerCookiesBuilder builder =
-                new CookiesBuilder.ServerCookiesBuilder(false, true);
-            for (String header : values) {
-                builder.parse(header);
-            }
-            return convertCookies(builder.build());
-
-        } else {
-            return Collections.emptyList();
-        }
-    }
-
     // --------------------------------------------------------- Private Methods
-
-
-    private List<Cookie> convertCookies(Cookies cookies) {
-
-        final org.glassfish.grizzly.http.Cookie[] grizzlyCookies = cookies.get();
-        List<Cookie> convertedCookies = new ArrayList<Cookie>(grizzlyCookies.length);
-        for (org.glassfish.grizzly.http.Cookie gCookie : grizzlyCookies) {
-            convertedCookies.add(new Cookie(gCookie.getName(),
-                                   gCookie.getValue(),
-                                   false,
-                                   gCookie.getDomain(),
-                                   gCookie.getPath(),
-                                   gCookie.getMaxAge(),
-                                   gCookie.isSecure(),
-                                   false));
-        }
-        return Collections.unmodifiableList(convertedCookies);
-
-    }
-
 
     private Charset getCharset(final String charset) {
 

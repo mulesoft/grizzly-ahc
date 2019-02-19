@@ -16,6 +16,7 @@ package com.ning.http.client;
 import static com.ning.http.util.MiscUtils.isNonEmpty;
 
 import com.ning.http.client.cookie.Cookie;
+import com.ning.http.client.cookie.GrizzlyCookieStore;
 import com.ning.http.client.uri.Uri;
 import com.ning.http.util.AsyncHttpProviderUtils;
 
@@ -28,15 +29,12 @@ public abstract class ResponseBase implements Response {
     protected final HttpResponseStatus status;
     protected final HttpResponseHeaders headers;
     protected final List<HttpResponseBodyPart> bodyParts;
-    private List<Cookie> cookies;
 
     protected ResponseBase(HttpResponseStatus status, HttpResponseHeaders headers, List<HttpResponseBodyPart> bodyParts) {
         this.bodyParts = bodyParts;
         this.headers = headers;
         this.status = status;
     }
-
-    protected abstract List<Cookie> buildCookies();
 
     protected Charset calculateCharset(String charset) {
 
@@ -99,10 +97,7 @@ public abstract class ResponseBase implements Response {
 
     @Override
     public List<Cookie> getCookies() {
-        if (cookies == null)
-            cookies = headers != null ? buildCookies() : Collections.<Cookie> emptyList();
-        return cookies;
-
+        return GrizzlyCookieStore.buildCookiesList(headers.getHeaders().get("set-cookie"));
     }
 
     @Override

@@ -1,8 +1,7 @@
 package com.ning.http.client.cookie;
 
-import com.ning.http.client.RequestBuilderBase;
 import org.glassfish.grizzly.http.Cookies;
-import org.glassfish.grizzly.http.CookiesBuilder;
+import org.glassfish.grizzly.http.CookiesBuilder.ServerCookiesBuilder;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -12,6 +11,7 @@ import java.util.List;
 import static com.ning.http.util.MiscUtils.isNonEmpty;
 
 public class GrizzlyCookieStore {
+    private static final int INITIAL_CAPACITY = 3;
 
     private List<Cookie> cookieJar;
 
@@ -31,7 +31,7 @@ public class GrizzlyCookieStore {
 
     public void lazyInitCookies(){
         if (this.cookieJar == null)
-            this.cookieJar = new ArrayList<>(3);
+            this.cookieJar = new ArrayList<>(INITIAL_CAPACITY);
     }
 
     public void addCookie(Cookie cookie) {
@@ -42,7 +42,7 @@ public class GrizzlyCookieStore {
     }
 
     public void addOrReplaceCookie(Cookie cookie) {
-        if (cookie.hasCookieExpired()) {
+        if (cookie.hasCookieExpired() || this.cookieJar.contains(cookie)) {
             return;
         }
         String cookieKey = cookie.getName();
@@ -76,8 +76,8 @@ public class GrizzlyCookieStore {
 
     private void build(List<String> headers) {
         if (isNonEmpty(headers)) {
-            CookiesBuilder.ServerCookiesBuilder builder =
-                    new CookiesBuilder.ServerCookiesBuilder(false, true);
+            ServerCookiesBuilder builder =
+                    new ServerCookiesBuilder(false, true);
             for (String header : headers) {
                 builder.parse(header);
             }
@@ -86,24 +86,36 @@ public class GrizzlyCookieStore {
         this.cookieJar = Collections.emptyList();
     }
 
-    private GrizzlyCookieStore convertCookies(Cookies cookies) {
+    public static List<Cookie> buildCookiesList(List<String> headers) {
+        if (isNonEmpty(headers)) {
+            ServerCookiesBuilder builder =
+                new ServerCookiesBuilder(false, true);
+            for (String header : headers) {
+                builder.parse(header);
+            }
+            return convertCookies(builder.build());
+
+        } else {
+            return Collections.emptyList();
+        }
+    }
+
+    protected static List<Cookie> convertCookies(Cookies cookies) {
         final org.glassfish.grizzly.http.Cookie[] grizzlyCookies = cookies.get();
         List<Cookie> convertedCookies = new ArrayList<>(grizzlyCookies.length);
+
         for (org.glassfish.grizzly.http.Cookie gCookie : grizzlyCookies) {
-            Cookie extractedCookie = new Cookie(gCookie.getName(),
+            convertedCookies.add(new Cookie(gCookie.getName(),
                     gCookie.getValue(),
                     false,
                     gCookie.getDomain(),
                     gCookie.getPath(),
                     gCookie.getMaxAge(),
                     gCookie.isSecure(),
-                    false);
-            if (!extractedCookie.hasCookieExpired()){
-                convertedCookies.add(extractedCookie);
-            }
+                    false));
         }
-        this.cookieJar = Collections.unmodifiableList(convertedCookies);
-        return this;
+        return Collections.unmodifiableList(convertedCookies);
+
     }
 
 }
