@@ -17,6 +17,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 public class Cookie {
 
     protected long whenCreated;
+    private static long UNDEFINED_MAX_AGE = -9223372036854775808L;
 
     /**
      * @param expires parameter will be ignored.
@@ -189,10 +190,10 @@ public class Cookie {
     public boolean hasCookieExpired() {
         // if not specify max-age, this cookie should be discarded when user agent is to be closed,
         // but it is not expired.
-        if (this.maxAge < 0){
+        if (this.maxAge == Cookie.UNDEFINED_MAX_AGE)
             return false;
-        }
-        if (this.maxAge == 0){
+
+        if (this.maxAge <= 0) {
             return true;
         }
         if (this.whenCreated > 0) {
