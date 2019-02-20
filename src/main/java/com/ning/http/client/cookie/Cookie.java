@@ -17,7 +17,7 @@ import static java.util.concurrent.TimeUnit.MILLISECONDS;
 public class Cookie {
 
     protected long whenCreated;
-    private static long UNDEFINED_MAX_AGE = -9223372036854775808L;
+    private static final long UNDEFINED_MAX_AGE = -9223372036854775808L;
 
     /**
      * @param expires parameter will be ignored.
