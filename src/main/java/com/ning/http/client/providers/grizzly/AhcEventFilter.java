@@ -18,7 +18,6 @@ import static com.ning.http.util.AsyncHttpProviderUtils.isSameHostAndProtocol;
 import static com.ning.http.util.AuthenticatorUtils.getHttpHeaderForAuthScheme;
 import static com.ning.http.util.MiscUtils.isNonEmpty;
 
-import com.ning.http.client.cookie.Cookie;
 import com.ning.http.client.providers.grizzly.events.GracefulCloseEvent;
 import com.ning.http.client.providers.grizzly.websocket.GrizzlyWebSocketAdapter;
 import com.ning.http.client.AsyncHandler;
@@ -577,17 +576,10 @@ final class AhcEventFilter extends HttpClientFilter {
                     final ConnectionManager m = provider.getConnectionManager();
                     c = m.openSync(req);
                 }
-
-                RequestBuilder requestBuilder = new RequestBuilder(req);
-
-                for (String cookieStr : responsePacket.getHeaders().values(Header.SetCookie)) {
-                    Cookie cookie = CookieDecoder.decode(cookieStr);
-                    requestBuilder.addOrReplaceCookie(cookie);
-                }
-
-                final Request nextRequest = requestBuilder.setRealm(newRealm)
+                
+                final Request nextRequest = new RequestBuilder(req)
+                        .setRealm(newRealm)
                         .build();
-
                 httpTransactionContext.skipCleanup = true;
                 final HttpTransactionContext newContext
                         = httpTransactionContext.cloneAndStartTransactionFor(
@@ -693,17 +685,11 @@ final class AhcEventFilter extends HttpClientFilter {
                     final ConnectionManager m = provider.getConnectionManager();
                     c = m.openSync(req);
                 }
-
-                RequestBuilder requestBuilder = new RequestBuilder(req);
-
-                for (String cookieStr : responsePacket.getHeaders().values(Header.SetCookie)) {
-                    Cookie cookie = CookieDecoder.decode(cookieStr);
-                    requestBuilder.addOrReplaceCookie(cookie);
-                }
-
-                final Request nextRequest = requestBuilder.setRealm(newRealm)
+                
+                final Request nextRequest = new RequestBuilder(req)
+                        .setRealm(newRealm)
                         .build();
-
+                
                 final HttpTransactionContext newContext
                         = httpTransactionContext.cloneAndStartTransactionFor(
                                 c, nextRequest);
@@ -831,8 +817,7 @@ final class AhcEventFilter extends HttpClientFilter {
         }
         builder.setUrl(newUri.toString());
         for (String cookieStr : response.getHeaders().values(Header.SetCookie)) {
-            Cookie c = CookieDecoder.decode(cookieStr);
-            builder.addOrReplaceCookie(c);
+            builder.addOrReplaceCookie(CookieDecoder.decode(cookieStr));
         }
                 
         return builder.build();

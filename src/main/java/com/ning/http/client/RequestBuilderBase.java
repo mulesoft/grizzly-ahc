@@ -17,7 +17,6 @@ package com.ning.http.client;
 
 import static com.ning.http.util.MiscUtils.isNonEmpty;
 
-import com.ning.http.client.cookie.GrizzlyCookieStore;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -52,7 +51,7 @@ public abstract class RequestBuilderBase<T extends RequestBuilderBase<T>> {
         private InetAddress address;
         private InetAddress localAddress;
         private FluentCaseInsensitiveStringsMap headers = new FluentCaseInsensitiveStringsMap();
-        private GrizzlyCookieStore cookieStore = new GrizzlyCookieStore();
+        private ArrayList<Cookie> cookies;
         private byte[] byteData;
         private List<byte[]> compositeByteData;
         private String stringData;
@@ -83,7 +82,7 @@ public abstract class RequestBuilderBase<T extends RequestBuilderBase<T>> {
                 this.address = prototype.getInetAddress();
                 this.localAddress = prototype.getLocalAddress();
                 this.headers = new FluentCaseInsensitiveStringsMap(prototype.getHeaders());
-                this.cookieStore = new GrizzlyCookieStore(prototype.getCookies());
+                this.cookies = new ArrayList<>(prototype.getCookies());
                 this.byteData = prototype.getByteData();
                 this.compositeByteData = prototype.getCompositeByteData();
                 this.stringData = prototype.getStringData();
@@ -137,7 +136,7 @@ public abstract class RequestBuilderBase<T extends RequestBuilderBase<T>> {
 
         @Override
         public Collection<Cookie> getCookies() {
-            return cookieStore.getCookies();
+            return cookies != null ? Collections.unmodifiableCollection(cookies) : Collections.<Cookie> emptyList();
         }
 
         @Override
@@ -358,23 +357,45 @@ public abstract class RequestBuilderBase<T extends RequestBuilderBase<T>> {
         return derived.cast(this);
     }
 
+    private void lazyInitCookies() {
+        if (request.cookies == null)
+            request.cookies = new ArrayList<>(3);
+    }
+
     public T setCookies(Collection<Cookie> cookies) {
-        request.cookieStore.setCookies(cookies);
+        request.cookies = new ArrayList<>(cookies);
         return derived.cast(this);
     }
 
     public T addCookie(Cookie cookie) {
-        request.cookieStore.addCookie(cookie);
+        lazyInitCookies();
+        request.cookies.add(cookie);
         return derived.cast(this);
     }
 
     public T addOrReplaceCookie(Cookie cookie) {
-        request.cookieStore.addOrReplaceCookie(cookie);
+        String cookieKey = cookie.getName();
+        boolean replace = false;
+        int index = 0;
+        lazyInitCookies();
+        for (Cookie c : request.cookies) {
+            if (c.getName().equals(cookieKey)) {
+                replace = true;
+                break;
+            }
+
+            index++;
+        }
+        if (replace)
+            request.cookies.set(index, cookie);
+        else
+            request.cookies.add(cookie);
         return derived.cast(this);
     }
     
     public void resetCookies() {
-        request.cookieStore.clear();
+        if (request.cookies != null)
+            request.cookies.clear();
     }
     
     public void resetQuery() {
