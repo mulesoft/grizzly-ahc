@@ -1,5 +1,7 @@
 package com.ning.http.client.async;
 
+import static javax.servlet.http.HttpServletResponse.SC_INTERNAL_SERVER_ERROR;
+import static javax.servlet.http.HttpServletResponse.SC_OK;
 import static org.testng.Assert.assertEquals;
 
 import com.ning.http.client.AsyncCompletionHandler;
@@ -48,9 +50,8 @@ public abstract class LargePayloadStreamingTest extends AbstractBasicTest
         requestEndedLatch = new CountDownLatch(1);
     }
 
-    // TODO: Make test fail when OOM exception is thrown
     @Test(groups = { "standalone", "default_provider" })
-    public void testLargePayloadGetsStreamedSuccessfully() throws InterruptedException, ExecutionException
+    public void largePayloadGetsStreamedSuccessfully() throws InterruptedException, ExecutionException
     {
         assertPayloadOfSizeGetsStreamedCorrectly("1GB");
     }
@@ -62,13 +63,14 @@ public abstract class LargePayloadStreamingTest extends AbstractBasicTest
     }
 
     @Test(groups = { "standalone", "default_provider" })
-    public void testIncreasingPayloadSizeWarmsUpClient() throws ExecutionException, InterruptedException
+    public void increasingPayloadSizeWarmsUpClient() throws ExecutionException, InterruptedException
     {
         List<String> payloadSizes = Arrays.asList("100MB", "300MB", "600MB", "800MB", "1GB");
 
         for (String aSize : payloadSizes) {
             assertPayloadOfSizeGetsStreamedCorrectly(aSize);
-            System.out.printf("Payload of size %s has been tested correctly. Sleeping 1 second to let GC cleaning.\n", aSize);
+
+            // Sleep 1 second to let GC cleaning
             Thread.sleep(1000);
         }
     }
@@ -82,7 +84,7 @@ public abstract class LargePayloadStreamingTest extends AbstractBasicTest
 
             requestEndedLatch.await();
 
-            assertEquals(response.get().getStatusCode(), HttpServletResponse.SC_OK);
+            assertEquals(response.get().getStatusCode(), SC_OK);
         }
     }
 
@@ -90,6 +92,7 @@ public abstract class LargePayloadStreamingTest extends AbstractBasicTest
     {
         RequestBuilder requestBuilder = new RequestBuilder();
         requestBuilder.setMethod("POST");
+
         FeedableBodyGenerator generator = new FeedableBodyGenerator();
         NonBlockingInputStreamFeeder feeder =
                 new NonBlockingInputStreamFeeder(generator, new FixedSizeRandomInputStream(payloadSize));
@@ -103,7 +106,7 @@ public abstract class LargePayloadStreamingTest extends AbstractBasicTest
     private ListenableFuture<Response> executeAsyncRequest(AsyncHttpClient client, String payloadSize)
     {
         Long actualPayloadSize = toBytes(payloadSize);
-        System.out.printf("Generating request streaming a payload of size %s, which is %d Bytes.\n", payloadSize, actualPayloadSize);
+        // Generates request streaming a payload of 'actualPayloadSize' Bytes
         return executeAsyncRequest(client, actualPayloadSize);
     }
 
@@ -171,15 +174,12 @@ public abstract class LargePayloadStreamingTest extends AbstractBasicTest
         {
             if ("POST".equals(request.getMethod())) {
                 // Lock until whole payload has been consumed
-                System.out.println("START: Started reading received stream");
-                long totalReceivedSoFar = 0;
-                 while (request.getInputStream().read() != -1)
-                     totalReceivedSoFar++;
-                System.out.printf("END: Finished reading received stream. Total received: %d\n", totalReceivedSoFar);
+                while (request.getInputStream().read() != -1) {
+                }
                 // Whole payload has been consumed. Succeed.
-                response.setStatus(HttpServletResponse.SC_OK);
+                response.setStatus(SC_OK);
             } else {
-                response.sendError(HttpServletResponse.SC_FORBIDDEN);
+                response.sendError(SC_INTERNAL_SERVER_ERROR);
             }
             response.getOutputStream().flush();
             response.getOutputStream().close();
