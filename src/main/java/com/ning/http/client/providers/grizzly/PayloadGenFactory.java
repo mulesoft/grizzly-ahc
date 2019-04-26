@@ -12,21 +12,17 @@
  */
 package com.ning.http.client.providers.grizzly;
 
-import com.ning.http.client.*;
-import com.ning.http.client.generators.InputStreamBlockingBodyGenerator;
-import com.ning.http.client.generators.InputStreamBodyGenerator;
+import static com.ning.http.util.MiscUtils.isNonEmpty;
+
+import com.ning.http.client.AsyncHandler;
+import com.ning.http.client.Body;
+import com.ning.http.client.BodyGenerator;
+import com.ning.http.client.Param;
+import com.ning.http.client.Request;
 import com.ning.http.client.listener.TransferCompletionHandler;
 import com.ning.http.client.multipart.MultipartBody;
 import com.ning.http.client.multipart.MultipartUtils;
 import com.ning.http.client.multipart.Part;
-import org.glassfish.grizzly.*;
-import org.glassfish.grizzly.filterchain.FilterChainContext;
-import org.glassfish.grizzly.http.HttpContent;
-import org.glassfish.grizzly.http.HttpRequestPacket;
-import org.glassfish.grizzly.memory.Buffers;
-import org.glassfish.grizzly.memory.MemoryManager;
-import org.glassfish.grizzly.utils.Charsets;
-
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.IOException;
@@ -34,9 +30,17 @@ import java.io.InputStream;
 import java.net.URLEncoder;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
-
-import static com.ning.http.client.providers.grizzly.PayloadGenerator.MAX_CHUNK_SIZE;
-import static com.ning.http.util.MiscUtils.isNonEmpty;
+import org.glassfish.grizzly.Buffer;
+import org.glassfish.grizzly.CompletionHandler;
+import org.glassfish.grizzly.EmptyCompletionHandler;
+import org.glassfish.grizzly.FileTransfer;
+import org.glassfish.grizzly.WriteResult;
+import org.glassfish.grizzly.filterchain.FilterChainContext;
+import org.glassfish.grizzly.http.HttpContent;
+import org.glassfish.grizzly.http.HttpRequestPacket;
+import org.glassfish.grizzly.memory.Buffers;
+import org.glassfish.grizzly.memory.MemoryManager;
+import org.glassfish.grizzly.utils.Charsets;
 
 /**
  * {@link PayloadGenerator} factory.
@@ -53,8 +57,6 @@ final class PayloadGenFactory {
                 new StreamDataPayloadGenerator(),
                 new PartsPayloadGenerator(), 
                 new FilePayloadGenerator(),
-                new BlockingBodyGeneratorAdapter(),
-                new InputStreamBodyGeneratorAdapter(),
                 new BodyGeneratorAdapter()};
     
     public static PayloadGenerator wrapWithExpect(final PayloadGenerator generator) {
@@ -519,159 +521,14 @@ final class PayloadGenFactory {
                 final HttpContent content =
                         requestPacket.httpContentBuilder().content(buffer).
                                 last(last).build();
-              write(ctx, content,  ((!requestPacket.isCommitted()) ? ctx.getTransportContext().getCompletionHandler() : null));
+                write(ctx, content,  ((!requestPacket.isCommitted()) ? ctx.getTransportContext().getCompletionHandler() : null));
             }
             
             return true;
         }
 
-      protected void write(FilterChainContext ctx, HttpContent content, CompletionHandler<WriteResult> completionHandler) {
-        ctx.write(content, completionHandler);
-      }
-
-    } // END BodyGeneratorAdapter
-
-    /**
-     * This version of a {@link BodyGeneratorAdapter} will block upon writing, so when the write queue is full more writes will not
-     * be triggered which could lead to OOM errors for large bodies.
-     */
-    private static final class BlockingBodyGeneratorAdapter extends BodyGeneratorAdapter {
-
-      public boolean handlesPayloadType(final Request request) {
-        return (request.getBodyGenerator() != null) && request.getBodyGenerator() instanceof InputStreamBlockingBodyGenerator;
-      }
-
-      protected void write(FilterChainContext ctx, HttpContent content, CompletionHandler<WriteResult> completionHandler) {
-        ctx.write(content, completionHandler, true);
-      }
-
-    } // END BlockingBodyGeneratorAdapter
-
-
-  private static class InputStreamBodyGeneratorAdapter extends PayloadGenerator {
-
-    @Override
-    public boolean handlesPayloadType(Request request) {
-        return request.getBodyGenerator() instanceof InputStreamBodyGenerator;
-    }
-
-    @Override
-    public boolean generate(FilterChainContext ctx, Request request, HttpRequestPacket requestPacket)
-        throws IOException {
-      final BodyGenerator generator = request.getBodyGenerator();
-      final Body bodyLocal = generator.createBody();
-      final long len = bodyLocal.getContentLength();
-      if (len >= 0) {
-        requestPacket.setContentLengthLong(len);
-      } else {
-        requestPacket.setChunked(true);
-      }
-
-      CompletionHandler<WriteResult> completionHandler =
-          (!requestPacket.isCommitted()) ? ctx.getTransportContext().getCompletionHandler()
-              : new EmptyCompletionHandler<WriteResult>();
-
-      RequestStreamingCompletionHandler streamingCompletionHandler =
-          new RequestStreamingCompletionHandler(ctx, requestPacket, bodyLocal, completionHandler);
-
-      return streamingCompletionHandler.start();
-    }
-  } // END InputStreamBodyGeneratorAdapter
-
-  private static class RequestStreamingCompletionHandler implements CompletionHandler<WriteResult> {
-
-    private final MemoryManager memoryManager;
-    private final FilterChainContext ctx;
-    private final HttpRequestPacket requestPacket;
-    private final Body body;
-    private final CompletionHandler<WriteResult> delegate;
-
-    private volatile boolean isDone;
-
-    public RequestStreamingCompletionHandler(final FilterChainContext ctx, final HttpRequestPacket requestPacket, Body body,
-                                             CompletionHandler<WriteResult> delegate) {
-      this.ctx = ctx;
-      memoryManager = ctx.getConnection().getTransport().getMemoryManager();
-      this.requestPacket = requestPacket;
-      this.body = body;
-      this.delegate = delegate;
-    }
-
-    public boolean start() throws IOException {
-      return sendInputStreamChunk();
-    }
-
-    public boolean sendInputStreamChunk() throws IOException {
-      Buffer buffer = memoryManager.allocate(MAX_CHUNK_SIZE);
-      buffer.allowBufferDispose(true);
-
-      long bytesRead = body.read(buffer.toByteBuffer());
-      final HttpContent content;
-
-      if (bytesRead == -1) {
-        buffer.dispose();
-        buffer = Buffers.EMPTY_BUFFER;
-        isDone = true;
-      } else {
-        buffer.position((int) bytesRead);
-        buffer.trim();
-      }
-      content = requestPacket.httpContentBuilder().content(buffer).last(isDone).build();
-      ctx.write(content, this);
-      return isDone;
-    }
-
-    /**
-     * Method gets called, when file chunk was successfully sent.
-     *
-     * @param result the result
-     */
-    @Override
-    public void completed(WriteResult result) {
-      try {
-        if (!isDone) {
-          sendInputStreamChunk();
-        } else {
-          final HttpTransactionContext currentTransaction = HttpTransactionContext.currentTransaction(requestPacket);
-          if (currentTransaction != null) {
-            currentTransaction.onRequestFullySent();
-          }
-          delegate.completed(result);
-          resume();
+        protected void write(FilterChainContext ctx, HttpContent content, CompletionHandler<WriteResult> completionHandler) {
+            ctx.write(content, completionHandler);
         }
-      } catch (IOException e) {
-        failed(e);
-      }
-    }
-
-    @Override
-    public void updated(WriteResult result) {
-      delegate.updated(result);
-    }
-
-    /**
-     * The method will be called, when file transferring was canceled
-     */
-    @Override
-    public void cancelled() {
-      delegate.cancelled();
-      resume();
-    }
-
-    /**
-     * The method will be called, if file transferring was failed.
-     *
-     * @param throwable the cause
-     */
-    @Override
-    public void failed(Throwable throwable) {
-      delegate.failed(throwable);
-      resume();
-    }
-
-    private void resume() {
-      ctx.resume(ctx.getStopAction());
-    }
-
-  }
+    } // END BodyGeneratorAdapter
 }
