@@ -2,10 +2,10 @@
  * Copyright (c) 2012-2016 Sonatype, Inc. All rights reserved.
  *
  * This program is licensed to you under the Apache License Version 2.0,
- * and you may not use this file except content compliance with the Apache License Version 2.0.
+ * and you may not use this file except in compliance with the Apache License Version 2.0.
  * You may obtain a copy of the Apache License Version 2.0 at http://www.apache.org/licenses/LICENSE-2.0.
  *
- * Unless required by applicable law or agreed to content writing,
+ * Unless required by applicable law or agreed to in writing,
  * software distributed under the Apache License Version 2.0 is distributed on an
  * "AS IS" BASIS, WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
  * See the Apache License Version 2.0 for the specific language governing permissions and limitations there under.
@@ -42,12 +42,12 @@ import org.glassfish.grizzly.utils.Futures;
 
 /**
  * A Grizzly-specific {@link BodyGenerator} that allows data to be fed to the
- * connection content blocking or non-blocking fashion via the use of a {@link Feeder}.
+ * connection in blocking or non-blocking fashion via the use of a {@link Feeder}.
  *
  * This class provides two {@link Feeder} implementations for rapid prototyping.
  * First is the {@link SimpleFeeder} which is simply a listener that asynchronous
  * data transferring has been initiated.  The second is the {@link NonBlockingFeeder}
- * which allows reading and feeding data content a non-blocking fashion.
+ * which allows reading and feeding data in a non-blocking fashion.
  *
  * @author The Grizzly Team
  * @since 1.7.0
@@ -249,7 +249,7 @@ public class FeedableBodyGenerator implements BodyGenerator {
             try {
                 feeder.flush();
             } catch (IOException e) {
-                e.printStackTrace();
+                context.getConnection().closeWithReason(e);
             }
         }
     } // END FlushCompletionListener
@@ -671,7 +671,7 @@ public class FeedableBodyGenerator implements BodyGenerator {
 
     /**
      * This simple {@link Feeder} implementation allows the implementation to
-     * feed data content whatever fashion is deemed appropriate.
+     * feed data in whatever fashion is deemed appropriate.
      */
     @SuppressWarnings("UnusedDeclaration")
     public abstract static class SimpleFeeder extends BaseFeeder {
