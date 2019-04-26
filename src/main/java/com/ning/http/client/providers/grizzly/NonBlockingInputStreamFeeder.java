@@ -13,6 +13,7 @@
 package com.ning.http.client.providers.grizzly;
 
 import static org.glassfish.grizzly.memory.MemoryManager.DEFAULT_MEMORY_MANAGER;
+import static org.slf4j.LoggerFactory.getLogger;
 
 import java.io.IOException;
 import java.io.InputStream;
@@ -20,20 +21,24 @@ import java.io.InputStream;
 import org.glassfish.grizzly.Buffer;
 import org.glassfish.grizzly.memory.Buffers;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 public class NonBlockingInputStreamFeeder extends FeedableBodyGenerator.NonBlockingFeeder {
 
-  private final static Logger LOGGER = LoggerFactory.getLogger(NonBlockingInputStreamFeeder.class);
+  private static final Logger LOGGER = getLogger(NonBlockingInputStreamFeeder.class);
 
-  static final int INTERNAL_BUFFER_SIZE = 8192;
+  private static final int DEFAULT_INTERNAL_BUFFER_SIZE = 8192;
 
   private final InputStream content;
-  private byte[] bytesIn = new byte[INTERNAL_BUFFER_SIZE];
+  private byte[] bytesIn;
   private boolean isDone;
 
   public NonBlockingInputStreamFeeder(FeedableBodyGenerator feedableBodyGenerator, InputStream content) {
+    this(feedableBodyGenerator, content, DEFAULT_INTERNAL_BUFFER_SIZE);
+  }
+
+  public NonBlockingInputStreamFeeder(FeedableBodyGenerator feedableBodyGenerator, InputStream content, int internalBufferSize) {
     super(feedableBodyGenerator);
+    this.bytesIn = new byte[internalBufferSize];
     this.content = content;
   }
 
