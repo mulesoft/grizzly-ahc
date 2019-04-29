@@ -57,7 +57,7 @@ public abstract class LargePayloadStreamingTest extends AbstractBasicTest
     }
 
     @Test(groups = { "standalone", "default_provider" })
-    public void testLittlePayloadGetsStreamedSuccessfully() throws InterruptedException, ExecutionException
+    public void littlePayloadGetsStreamedSuccessfully() throws InterruptedException, ExecutionException
     {
         assertPayloadOfSizeGetsStreamedCorrectly("200B");
     }
