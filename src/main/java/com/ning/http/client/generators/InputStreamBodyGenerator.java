@@ -16,12 +16,12 @@ package com.ning.http.client.generators;
 import com.ning.http.client.Body;
 import com.ning.http.client.BodyGenerator;
 
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
 import java.io.IOException;
 import java.io.InputStream;
 import java.nio.ByteBuffer;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * A {@link BodyGenerator} which use an {@link InputStream} for reading bytes, without having to read the entire
@@ -34,7 +34,7 @@ public class InputStreamBodyGenerator implements BodyGenerator {
 
     private final static byte[] END_PADDING = "\r\n".getBytes();
     private final static byte[] ZERO = "0".getBytes();
-    private final InputStream inputStream;
+    protected final InputStream inputStream;
     private final static Logger logger = LoggerFactory.getLogger(InputStreamBodyGenerator.class);
     private boolean patchNettyChunkingIssue = false;
 
@@ -59,13 +59,18 @@ public class InputStreamBodyGenerator implements BodyGenerator {
     
           inputStream.mark(0);
         }
+        return doCreateBody();
+    }
+
+    protected ISBody doCreateBody()
+    {
         return new ISBody();
     }
 
     protected class ISBody implements Body {
         private boolean eof = false;
         private int endDataCount = 0;
-        private byte[] chunk;
+        protected byte[] chunk;
 
         @Override
         public long getContentLength() {
@@ -78,10 +83,9 @@ public class InputStreamBodyGenerator implements BodyGenerator {
             // To be safe.
             chunk = new byte[buffer.remaining() - 10];
 
-
             int read = -1;
             try {
-                read = inputStream.read(chunk);
+                read = doRead();
             } catch (IOException ex) {
                 logger.warn("Unable to read", ex);
             }
@@ -123,6 +127,10 @@ public class InputStreamBodyGenerator implements BodyGenerator {
                 buffer.put(chunk, 0, read);
             }
             return read;
+        }
+
+        protected int doRead() throws IOException {
+            return inputStream.read(chunk);
         }
 
         @Override

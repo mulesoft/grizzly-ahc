@@ -13,6 +13,12 @@
 
 package com.ning.http.client.async.grizzly;
 
+import static org.glassfish.grizzly.http.server.NetworkListener.DEFAULT_NETWORK_HOST;
+import static org.glassfish.grizzly.memory.MemoryManager.DEFAULT_MEMORY_MANAGER;
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNull;
+import static org.testng.Assert.fail;
+
 import com.ning.http.client.AsyncCompletionHandler;
 import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.AsyncHttpClientConfig;
@@ -20,6 +26,7 @@ import com.ning.http.client.RequestBuilder;
 import com.ning.http.client.providers.grizzly.FeedableBodyGenerator;
 import com.ning.http.client.providers.grizzly.FeedableBodyGenerator.NonBlockingFeeder;
 import com.ning.http.client.providers.grizzly.GrizzlyAsyncHttpProvider;
+
 import java.io.File;
 import java.io.FileInputStream;
 import java.io.FileOutputStream;
@@ -31,19 +38,17 @@ import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
+
 import org.glassfish.grizzly.Buffer;
 import org.glassfish.grizzly.http.server.HttpHandler;
 import org.glassfish.grizzly.http.server.HttpServer;
 import org.glassfish.grizzly.http.server.NetworkListener;
-import static org.glassfish.grizzly.http.server.NetworkListener.DEFAULT_NETWORK_HOST;
 import org.glassfish.grizzly.http.server.Request;
 import org.glassfish.grizzly.http.server.Response;
 import org.glassfish.grizzly.memory.Buffers;
-import static org.glassfish.grizzly.memory.MemoryManager.DEFAULT_MEMORY_MANAGER;
 import org.glassfish.grizzly.ssl.SSLContextConfigurator;
 import org.glassfish.grizzly.ssl.SSLEngineConfigurator;
 import org.glassfish.grizzly.utils.Charsets;
-import static org.testng.Assert.*;
 import org.testng.annotations.AfterMethod;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
@@ -103,22 +108,22 @@ public class GrizzlyFeedableBodyGeneratorTest {
 
 
     @Test
-    public void testSimpleFeederMultipleThreads() throws Exception {
+    public void simpleFeederMultipleThreads() throws Exception {
         doSimpleFeeder(false);
     }
 
     @Test
-    public void testSimpleFeederOverSSLMultipleThreads() throws Exception {
+    public void simpleFeederOverSSLMultipleThreads() throws Exception {
         doSimpleFeeder(true);
     }
 
     @Test
-    public void testNonBlockingFeederMultipleThreads() throws Exception {
+    public void nonBlockingFeederMultipleThreads() throws Exception {
         doNonBlockingFeeder(false);
     }
 
     @Test
-    public void testNonBlockingFeederOverSSLMultipleThreads() throws Exception {
+    public void nonBlockingFeederOverSSLMultipleThreads() throws Exception {
         doNonBlockingFeeder(true);
     }
 

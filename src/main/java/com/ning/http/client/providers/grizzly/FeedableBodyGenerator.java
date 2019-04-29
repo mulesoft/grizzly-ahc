@@ -12,6 +12,11 @@
  */
 package com.ning.http.client.providers.grizzly;
 
+import static java.lang.Boolean.TRUE;
+import static java.util.concurrent.TimeUnit.MILLISECONDS;
+import static org.glassfish.grizzly.ssl.SSLUtils.getSSLEngine;
+import static org.glassfish.grizzly.utils.Exceptions.makeIOException;
+
 import com.ning.http.client.Body;
 import com.ning.http.client.BodyGenerator;
 
@@ -32,13 +37,8 @@ import org.glassfish.grizzly.impl.FutureImpl;
 import org.glassfish.grizzly.ssl.SSLBaseFilter;
 import org.glassfish.grizzly.ssl.SSLFilter;
 import org.glassfish.grizzly.threadpool.Threads;
-import org.glassfish.grizzly.utils.Futures;
-
-import static java.lang.Boolean.TRUE;
-import static java.util.concurrent.TimeUnit.MILLISECONDS;
-import static org.glassfish.grizzly.ssl.SSLUtils.getSSLEngine;
 import org.glassfish.grizzly.utils.Exceptions;
-import static org.glassfish.grizzly.utils.Exceptions.*;
+import org.glassfish.grizzly.utils.Futures;
 
 /**
  * A Grizzly-specific {@link BodyGenerator} that allows data to be fed to the
@@ -84,6 +84,8 @@ public class FeedableBodyGenerator implements BodyGenerator {
 
     @Override
     public Body createBody() throws IOException {
+        asyncTransferInitiated = false;
+        feeder.reset();
         return EMPTY_BODY;
     }
 
@@ -144,7 +146,7 @@ public class FeedableBodyGenerator implements BodyGenerator {
 
     // ------------------------------------------------- Package Private Methods
 
-    
+
     synchronized void initializeAsynchronousTransfer(final FilterChainContext context,
                                                      final HttpRequestPacket requestPacket)
     throws IOException {
@@ -166,8 +168,9 @@ public class FeedableBodyGenerator implements BodyGenerator {
             c.setMaxAsyncWriteQueueSize(configuredMaxPendingBytes);
         }
         this.context = context;
+        context.addCompletionListener(new FlushCompletionListener(feeder));
         asyncTransferInitiated = true;
-        
+
         if (requestPacket.isSecure() &&
                 (getSSLEngine(context.getConnection()) == null)) {
             flushOnSSLHandshakeComplete();
@@ -233,6 +236,23 @@ public class FeedableBodyGenerator implements BodyGenerator {
 
     // ----------------------------------------------------------- Inner Classes
 
+    private static class FlushCompletionListener implements FilterChainContext.CompletionListener {
+
+        private Feeder feeder;
+
+        FlushCompletionListener(Feeder feeder) {
+            this.feeder = feeder;
+        }
+
+        @Override
+        public synchronized void onComplete(FilterChainContext context) {
+            try {
+                feeder.flush();
+            } catch (IOException e) {
+                context.getConnection().closeWithReason(e);
+            }
+        }
+    } // END FlushCompletionListener
 
     private final class EmptyBody implements Body {
 
@@ -298,6 +318,13 @@ public class FeedableBodyGenerator implements BodyGenerator {
          */
         void feed(final Buffer buffer, final boolean last) throws IOException;
 
+        /**
+         * This method will be called if the {@link BodyGenerator} is reused, as
+         * with authentication or redirect requests, so that if possible the
+         * underlying data is reset.
+         */
+        void reset();
+
     } // END Feeder
 
 
@@ -320,6 +347,12 @@ public class FeedableBodyGenerator implements BodyGenerator {
 
         // --------------------------------------------- Package Private Methods
 
+
+
+        @Override
+        public void reset() {
+            wasLastSent = false;
+        }
 
         @SuppressWarnings("UnusedDeclaration")
         @Override
