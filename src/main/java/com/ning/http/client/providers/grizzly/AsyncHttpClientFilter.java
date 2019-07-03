@@ -56,21 +56,21 @@ import org.slf4j.LoggerFactory;
 /**
  * Grizzly higher level async HTTP client filter, that works as a bridge between
  * AHC and Grizzly HTTP APIs.
- * 
+ *
  * @author Grizzly team
  */
 final class AsyncHttpClientFilter extends BaseFilter {
     private final static Logger LOGGER = LoggerFactory.getLogger(AsyncHttpClientFilter.class);
-    
+
     private final static Attribute<Boolean> USED_CONNECTION =
             Grizzly.DEFAULT_ATTRIBUTE_BUILDER.createAttribute(
                     AsyncHttpClientFilter.class.getName() + ".used-connection");
-    
+
     // Lazy NTLM instance holder
     private static class NTLM_INSTANCE_HOLDER {
         private final static NTLMEngine ntlmEngine = new NTLMEngine();
     }
-    
+
     private static final HeaderValue KEEP_ALIVE_VALUE = HeaderValue.newHeaderValue("keep-alive");
     private static final HeaderValue CLOSE_VALUE = HeaderValue.newHeaderValue("close");
 
@@ -109,14 +109,14 @@ final class AsyncHttpClientFilter extends BaseFilter {
 
     private boolean sendAsGrizzlyRequest(final HttpTransactionContext httpTxCtx,
             final FilterChainContext ctx) throws IOException {
-        
+
         final Connection connection = ctx.getConnection();
-        
+
         final boolean isUsedConnection = Boolean.TRUE.equals(USED_CONNECTION.get(connection));
         if (!isUsedConnection) {
             USED_CONNECTION.set(connection, Boolean.TRUE);
         }
-        
+
         final Request ahcRequest = httpTxCtx.getAhcRequest();
         if (isUpgradeRequest(httpTxCtx.getAsyncHandler()) &&
                 isWSRequest(httpTxCtx.requestUri)) {
@@ -132,12 +132,12 @@ final class AsyncHttpClientFilter extends BaseFilter {
         final boolean isEstablishingConnectTunnel = useProxy &&
                 (secure || httpTxCtx.isWSRequest) &&
                 !httpTxCtx.isTunnelEstablished(connection);
-        
+
         if (isEstablishingConnectTunnel) {
             // once the tunnel is established, sendAsGrizzlyRequest will
             // be called again and we'll finally send the request over the tunnel
             return establishConnectTunnel(proxy, httpTxCtx, uri, ctx);
-        }        
+        }
         final HttpRequestPacket.Builder builder = HttpRequestPacket.builder()
                 .protocol(Protocol.HTTP_1_1)
                 .method(method);
@@ -154,7 +154,7 @@ final class AsyncHttpClientFilter extends BaseFilter {
         final PayloadGenerator payloadGenerator = isPayloadAllowed(method)
                 ? PayloadGenFactory.getPayloadGenerator(ahcRequest)
                 : null;
-        
+
         if (payloadGenerator != null) {
             final long contentLength = ahcRequest.getContentLength();
             if (contentLength >= 0) {
@@ -177,20 +177,21 @@ final class AsyncHttpClientFilter extends BaseFilter {
         } else {
             requestPacket = builder.build();
         }
-        
+
         requestPacket.setSecure(secure);
-        setupKeepAlive(requestPacket, connection);
-        
+        boolean shouldInvalidateNtlmSession = req.getRealm().credentialMayVary() && Utils.isNtlmEstablished(connection);
+        setupKeepAlive(requestPacket, connection, shouldInvalidateNtlmSession);
+
         copyHeaders(ahcRequest, requestPacket);
         addCookies(ahcRequest, requestPacket);
         addHostHeaderIfNeeded(ahcRequest, uri, requestPacket);
         addServiceHeaders(requestPacket);
         addAcceptHeaders(requestPacket);
-        
+
         final Realm realm = getRealm(ahcRequest);
         addAuthorizationHeader(ahcRequest, requestPacket, realm,
                 uri, proxy, isUsedConnection);
-        
+
         if (useProxy) {
             addProxyHeaders(ahcRequest, requestPacket, realm, proxy,
                     isUsedConnection, false);
@@ -204,35 +205,35 @@ final class AsyncHttpClientFilter extends BaseFilter {
        if (isFullySent) {
            httpTxCtx.onRequestFullySent();
        }
-       
+
        return isFullySent;
     }
 
     private boolean establishConnectTunnel(final ProxyServer proxy,
             final HttpTransactionContext httpCtx, final Uri uri,
             final FilterChainContext ctx) throws IOException {
-        
+
         final Connection connection = ctx.getConnection();
         final HttpRequestPacket requestPacket = HttpRequestPacket.builder()
                 .protocol(Protocol.HTTP_1_0)
                 .method(Method.CONNECT)
                 .uri(AsyncHttpProviderUtils.getAuthority(uri))
                 .build();
-        
-        setupKeepAlive(requestPacket, connection);
-        
+
+        setupKeepAlive(requestPacket, connection, false);
+
         httpCtx.establishingTunnel = true;
 
         final Request request = httpCtx.getAhcRequest();
         addHostHeaderIfNeeded(request, uri, requestPacket);
         addServiceHeaders(requestPacket);
-        
+
         final Realm realm = getRealm(request);
         addProxyHeaders(request, requestPacket, realm, proxy, false, true);
-        
+
         // turn off SSL, because CONNECT will be sent in plain mode
         ctx.notifyDownstream(new SSLSwitchingEvent(connection, false));
-        
+
         return sendRequest(httpCtx, ctx, requestPacket, null);
     }
 
@@ -242,19 +243,19 @@ final class AsyncHttpClientFilter extends BaseFilter {
                      final HttpRequestPacket requestPacket,
                      final PayloadGenerator payloadGenerator)
     throws IOException {
-        
+
         final Connection connection = httpTxCtx.getConnection();
         final Request request = httpTxCtx.getAhcRequest();
         final AsyncHandler h = httpTxCtx.getAsyncHandler();
-        
+
         // create HttpContext and mutually bind it with HttpTransactionContext
         final HttpContext httpCtx = new AhcHttpContext(
                 connection, connection, connection, requestPacket, httpTxCtx);
         HttpTransactionContext.bind(httpCtx, httpTxCtx);
-        
+
         requestPacket.getProcessingState().setHttpContext(httpCtx);
         httpCtx.attach(ctx);
-        
+
         if (h instanceof TransferCompletionHandler) {
             final FluentCaseInsensitiveStringsMap map
                     = new FluentCaseInsensitiveStringsMap(request.getHeaders());
@@ -262,9 +263,9 @@ final class AsyncHttpClientFilter extends BaseFilter {
         }
 
         requestPacket.setConnection(ctx.getConnection());
-        
+
         boolean isWriteComplete = true;
-        
+
         if (payloadGenerator != null) { // Check if the HTTP request has body
             httpTxCtx.payloadGenerator = payloadGenerator;
             if (LOGGER.isDebugEnabled()) {
@@ -278,10 +279,10 @@ final class AsyncHttpClientFilter extends BaseFilter {
             ctx.write(requestPacket, ctx.getTransportContext().getCompletionHandler());
         }
 
-        
+
         return isWriteComplete;
     }
-    
+
     /**
      * check if we need to wrap the PayloadGenerator with ExpectHandler
      */
@@ -306,7 +307,7 @@ final class AsyncHttpClientFilter extends BaseFilter {
             final Realm realm,
             final Uri uri, ProxyServer proxy,
             final boolean isUsedConnection) throws IOException {
-        
+
         if (!isUsedConnection) {
             final String conAuth =
                     AuthenticatorUtils.perConnectionAuthorizationHeader(
@@ -315,7 +316,7 @@ final class AsyncHttpClientFilter extends BaseFilter {
                 requestPacket.addHeader(Header.Authorization, conAuth);
             }
         }
-        
+
         final String reqAuth = AuthenticatorUtils.perRequestAuthorizationHeader(
                 req, uri, realm);
         if (reqAuth != null) {
@@ -330,7 +331,7 @@ final class AsyncHttpClientFilter extends BaseFilter {
             final ProxyServer proxy,
             final boolean isUsedConnection,
             final boolean isConnect) throws IOException {
-        
+
         setKeepAliveForHeader(Header.ProxyConnection, requestPacket);
         setProxyAuthorizationHeader(req, requestPacket, proxy, realm,
                 isUsedConnection, isConnect);
@@ -342,12 +343,12 @@ final class AsyncHttpClientFilter extends BaseFilter {
             final boolean isConnect) throws IOException {
         final String reqAuth = AuthenticatorUtils.perRequestProxyAuthorizationHeader(
                 req, realm, proxy, isConnect);
-        
+
         if (reqAuth != null) {
             requestPacket.setHeader(Header.ProxyAuthorization, reqAuth);
             return;
         }
-        
+
         if (!isUsedConnection) {
             final String conAuth =
                     AuthenticatorUtils.perConnectionProxyAuthorizationHeader(
@@ -430,13 +431,13 @@ final class AsyncHttpClientFilter extends BaseFilter {
         if (!headers.contains(Header.UserAgent)) {
             headers.addValue(Header.UserAgent).setString(config.getUserAgent());
         }
-        
+
         setKeepAliveForHeader(Header.Connection, requestPacket);
     }
 
     private void setKeepAliveForHeader(final Header header,
             final HttpRequestPacket requestPacket) {
-        
+
         final MimeHeaders headers = requestPacket.getHeaders();
 
         // Assign Connection: ... if needed
@@ -489,10 +490,10 @@ final class AsyncHttpClientFilter extends BaseFilter {
             gCookies[idx++] = new org.glassfish.grizzly.http.Cookie(cookie.getName(), cookie.getValue());
         }
     }
-    
+
     private void setupKeepAlive(final HttpRequestPacket request,
-            final Connection connection) {
+            final Connection connection, boolean forceConnectionClose) {
         request.getProcessingState().setKeepAlive(
-                ConnectionManager.isKeepAlive(connection));
+                ConnectionManager.isKeepAlive(connection) && !forceConnectionClose);
     }
 } // END AsyncHttpClientFiler

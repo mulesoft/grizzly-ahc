@@ -55,6 +55,7 @@ public class Realm {
     private final boolean useAbsoluteURI;
     private final boolean omitQuery;
     private final boolean targetProxy;
+    private final boolean credentialMayVary;
 
     private final String ntlmDomain;
 
@@ -86,7 +87,8 @@ public class Realm {
                   String opaque,
                   boolean useAbsoluteURI,
                   boolean omitQuery,
-                  boolean targetProxy) {
+                  boolean targetProxy,
+                  boolean credentialMayVary) {
 
         this.principal = principal;
         this.password = password;
@@ -108,6 +110,7 @@ public class Realm {
         this.useAbsoluteURI = useAbsoluteURI;
         this.omitQuery = omitQuery;
         this.targetProxy = targetProxy;
+        this.credentialMayVary = credentialMayVary;
     }
 
     public String getPrincipal() {
@@ -205,6 +208,11 @@ public class Realm {
         return targetProxy;
     }
 
+    public boolean credentialMayVary()
+    {
+        return credentialMayVary;
+    }
+
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -246,6 +254,7 @@ public class Realm {
                 ", methodName='" + methodName + '\'' +
                 ", useAbsoluteURI='" + useAbsoluteURI + '\'' +
                 ", omitQuery='" + omitQuery + '\'' +
+                ", credentialsMayVary='" + credentialMayVary + '\'' +
                 '}';
     }
 
@@ -295,6 +304,7 @@ public class Realm {
         private boolean useAbsoluteURI = false;
         private boolean omitQuery = false;
         private boolean targetProxy = false;
+        private boolean credentialsMayVary = false;
 
         private static final ThreadLocal<MessageDigest> digestThreadLocal = new ThreadLocal<MessageDigest>() {
             @Override
@@ -471,7 +481,13 @@ public class Realm {
             this.targetProxy = targetProxy;
             return this;
         }
-        
+
+        public RealmBuilder setCredentialsMayVary(boolean credentialsMayVary)
+        {
+            this.credentialsMayVary = credentialsMayVary;
+            return this;
+        }
+
         private String parseRawQop(String rawQop) {
             String[] rawServerSupportedQops = rawQop.split(",");
             String[] serverSupportedQops = new String[rawServerSupportedQops.length];
@@ -551,7 +567,8 @@ public class Realm {
                     .setNtlmHost(clone.getNtlmHost())//
                     .setUseAbsoluteURI(clone.isUseAbsoluteURI())//
                     .setOmitQuery(clone.isOmitQuery())//
-                    .setTargetProxy(clone.isTargetProxy());
+                    .setTargetProxy(clone.isTargetProxy())
+                    .setCredentialsMayVary(clone.credentialMayVary());
         }
 
         private void newCnonce(MessageDigest md) {
@@ -705,7 +722,9 @@ public class Realm {
                     opaque,
                     useAbsoluteURI,
                     omitQuery,
-                    targetProxy);
+                    targetProxy,
+                    credentialsMayVary);
         }
+
     }
 }
