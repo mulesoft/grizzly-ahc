@@ -208,8 +208,12 @@ public class Realm {
         return targetProxy;
     }
 
-    public boolean credentialMayVary()
-    {
+    /**
+     * Return true if the provided credentials may vary in some future request.
+     *
+     * @return true if the provided credentials may vary in some future request.
+     */
+    public boolean credentialMayVary() {
         return credentialMayVary;
     }
 
@@ -482,8 +486,7 @@ public class Realm {
             return this;
         }
 
-        public RealmBuilder setCredentialsMayVary(boolean credentialsMayVary)
-        {
+        public RealmBuilder setCredentialsMayVary(boolean credentialsMayVary) {
             this.credentialsMayVary = credentialsMayVary;
             return this;
         }
