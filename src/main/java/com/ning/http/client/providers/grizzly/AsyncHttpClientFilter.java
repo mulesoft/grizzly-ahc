@@ -179,7 +179,7 @@ final class AsyncHttpClientFilter extends BaseFilter {
         }
 
         requestPacket.setSecure(secure);
-        boolean shouldInvalidateNtlmSession = req.getRealm() != null && req.getRealm().credentialMayVary() && Utils.isNtlmEstablished(connection);
+        boolean shouldInvalidateNtlmSession = req.getRealm() != null && req.getRealm().shouldForceConnectionClose() && Utils.isNtlmEstablished(connection);
         setupKeepAlive(requestPacket, connection, shouldInvalidateNtlmSession);
 
         copyHeaders(ahcRequest, requestPacket);

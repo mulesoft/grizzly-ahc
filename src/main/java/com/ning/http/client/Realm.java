@@ -55,7 +55,7 @@ public class Realm {
     private final boolean useAbsoluteURI;
     private final boolean omitQuery;
     private final boolean targetProxy;
-    private final boolean credentialMayVary;
+    private final boolean forceConnectionClose;
 
     private final String ntlmDomain;
 
@@ -88,7 +88,7 @@ public class Realm {
                   boolean useAbsoluteURI,
                   boolean omitQuery,
                   boolean targetProxy,
-                  boolean credentialMayVary) {
+                  boolean forceConnectionClose) {
 
         this.principal = principal;
         this.password = password;
@@ -110,7 +110,7 @@ public class Realm {
         this.useAbsoluteURI = useAbsoluteURI;
         this.omitQuery = omitQuery;
         this.targetProxy = targetProxy;
-        this.credentialMayVary = credentialMayVary;
+        this.forceConnectionClose = forceConnectionClose;
     }
 
     public String getPrincipal() {
@@ -209,12 +209,12 @@ public class Realm {
     }
 
     /**
-     * Return true if the provided credentials may vary in some future request.
+     * Return true if the connections with this realm should enforce the <b>Connection: close</b> header.
      *
-     * @return true if the provided credentials may vary in some future request.
+     * @return true connection-closure should be enforced.
      */
-    public boolean credentialMayVary() {
-        return credentialMayVary;
+    public boolean shouldForceConnectionClose() {
+        return forceConnectionClose;
     }
 
     @Override
@@ -258,7 +258,7 @@ public class Realm {
                 ", methodName='" + methodName + '\'' +
                 ", useAbsoluteURI='" + useAbsoluteURI + '\'' +
                 ", omitQuery='" + omitQuery + '\'' +
-                ", credentialsMayVary='" + credentialMayVary + '\'' +
+                ", forceConnectionClose='" + forceConnectionClose + '\'' +
                 '}';
     }
 
@@ -308,7 +308,7 @@ public class Realm {
         private boolean useAbsoluteURI = false;
         private boolean omitQuery = false;
         private boolean targetProxy = false;
-        private boolean credentialsMayVary = false;
+        private boolean forceConnectionClose = false;
 
         private static final ThreadLocal<MessageDigest> digestThreadLocal = new ThreadLocal<MessageDigest>() {
             @Override
@@ -486,8 +486,8 @@ public class Realm {
             return this;
         }
 
-        public RealmBuilder setCredentialsMayVary(boolean credentialsMayVary) {
-            this.credentialsMayVary = credentialsMayVary;
+        public RealmBuilder setForceConnectionClose(boolean forceConnectionClose) {
+            this.forceConnectionClose = forceConnectionClose;
             return this;
         }
 
@@ -571,7 +571,7 @@ public class Realm {
                     .setUseAbsoluteURI(clone.isUseAbsoluteURI())//
                     .setOmitQuery(clone.isOmitQuery())//
                     .setTargetProxy(clone.isTargetProxy())
-                    .setCredentialsMayVary(clone.credentialMayVary());
+                    .setForceConnectionClose(clone.shouldForceConnectionClose());
         }
 
         private void newCnonce(MessageDigest md) {
@@ -726,8 +726,7 @@ public class Realm {
                     useAbsoluteURI,
                     omitQuery,
                     targetProxy,
-                    credentialsMayVary);
+                    forceConnectionClose);
         }
-
     }
 }
