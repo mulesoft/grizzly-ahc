@@ -18,8 +18,10 @@ import org.eclipse.jetty.http.HttpMethod;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.eclipse.jetty.server.handler.HandlerWrapper;
 import org.testng.Assert;
+import org.testng.annotations.BeforeTest;
 import org.testng.annotations.Test;
 
+import static org.testng.Assert.assertEquals;
 import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.AsyncHttpClientConfig;
 import com.ning.http.client.Realm;
@@ -49,6 +51,7 @@ import java.net.URL;
 import java.util.Random;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
+import java.util.concurrent.atomic.AtomicInteger;
 
 public abstract class NTLMTest extends AbstractBasicTest {
 
@@ -56,9 +59,18 @@ public abstract class NTLMTest extends AbstractBasicTest {
     
     public static class NTLMHandler extends HandlerWrapper {
 
+        private static boolean lastRequestHasConnectionCloseHeader = false;
+        private static AtomicInteger handledRequestsCount = new AtomicInteger(0);
+
         @Override
         public void handle(String pathInContext, org.eclipse.jetty.server.Request request, HttpServletRequest httpRequest,
                 HttpServletResponse httpResponse) throws IOException, ServletException {
+
+            if (handledRequestsCount.get() == 2 &&
+                request.getHeader("Connection") != null &&
+                request.getHeader("Connection").equalsIgnoreCase("close")) {
+                lastRequestHasConnectionCloseHeader = true;
+            }
 
             String authorization = httpRequest.getHeader("Authorization");
             if (authorization == null) {
@@ -81,7 +93,14 @@ public abstract class NTLMTest extends AbstractBasicTest {
             httpResponse.setContentLength(0);
             httpResponse.getOutputStream().flush();
             httpResponse.getOutputStream().close();
+            handledRequestsCount.incrementAndGet();
         }
+    }
+
+    @BeforeTest
+    public void clearConnectionHeaderAssertions() {
+        NTLMHandler.lastRequestHasConnectionCloseHeader = false;
+        NTLMHandler.handledRequestsCount.set(0);
     }
 
     @Override
@@ -143,5 +162,11 @@ public abstract class NTLMTest extends AbstractBasicTest {
     @Test
     public void preemptiveNTLMAuthGetTest() throws IOException, InterruptedException, ExecutionException {
       ntlmAuthWithGetTest(realmBuilderBase().setUsePreemptiveAuth(true));
+    }
+
+    @Test
+    public void connectionCloseIsSentOnClosureEnforcerRealm() throws InterruptedException, ExecutionException, IOException {
+        ntlmAuthWithGetTest(realmBuilderBase().setForceConnectionClose(true));
+        assertEquals(NTLMHandler.lastRequestHasConnectionCloseHeader, true);
     }
 }
