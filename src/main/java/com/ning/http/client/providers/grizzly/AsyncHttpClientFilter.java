@@ -179,9 +179,8 @@ final class AsyncHttpClientFilter extends BaseFilter {
         }
         
         requestPacket.setSecure(secure);
-        boolean shouldInvalidateNtlmSession = req.getRealm() != null && req.getRealm().shouldForceConnectionClose() && Utils.isNtlmEstablished(connection);
-        setupKeepAlive(requestPacket, connection, shouldInvalidateNtlmSession);
-
+        setupKeepAlive(requestPacket, connection);
+        
         copyHeaders(ahcRequest, requestPacket);
         addCookies(ahcRequest, requestPacket);
         addHostHeaderIfNeeded(ahcRequest, uri, requestPacket);
@@ -220,7 +219,7 @@ final class AsyncHttpClientFilter extends BaseFilter {
                 .uri(AsyncHttpProviderUtils.getAuthority(uri))
                 .build();
         
-        setupKeepAlive(requestPacket, connection, false);
+        setupKeepAlive(requestPacket, connection);
         
         httpCtx.establishingTunnel = true;
 
@@ -492,8 +491,8 @@ final class AsyncHttpClientFilter extends BaseFilter {
     }
     
     private void setupKeepAlive(final HttpRequestPacket request,
-            final Connection connection, boolean forceConnectionClose) {
+            final Connection connection) {
         request.getProcessingState().setKeepAlive(
-                ConnectionManager.isKeepAlive(connection) && !forceConnectionClose);
+                ConnectionManager.isKeepAlive(connection));
     }
 } // END AsyncHttpClientFiler

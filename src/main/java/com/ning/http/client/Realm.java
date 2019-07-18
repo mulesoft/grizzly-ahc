@@ -55,7 +55,6 @@ public class Realm {
     private final boolean useAbsoluteURI;
     private final boolean omitQuery;
     private final boolean targetProxy;
-    private final boolean forceConnectionClose;
 
     private final String ntlmDomain;
 
@@ -87,8 +86,7 @@ public class Realm {
                   String opaque,
                   boolean useAbsoluteURI,
                   boolean omitQuery,
-                  boolean targetProxy,
-                  boolean forceConnectionClose) {
+                  boolean targetProxy) {
 
         this.principal = principal;
         this.password = password;
@@ -110,7 +108,6 @@ public class Realm {
         this.useAbsoluteURI = useAbsoluteURI;
         this.omitQuery = omitQuery;
         this.targetProxy = targetProxy;
-        this.forceConnectionClose = forceConnectionClose;
     }
 
     public String getPrincipal() {
@@ -208,15 +205,6 @@ public class Realm {
         return targetProxy;
     }
 
-    /**
-     * Return true if the connections with this realm should enforce the <b>Connection: close</b> header.
-     *
-     * @return true connection-closure should be enforced.
-     */
-    public boolean shouldForceConnectionClose() {
-        return forceConnectionClose;
-    }
-
     @Override
     public boolean equals(Object o) {
         if (this == o) return true;
@@ -258,7 +246,6 @@ public class Realm {
                 ", methodName='" + methodName + '\'' +
                 ", useAbsoluteURI='" + useAbsoluteURI + '\'' +
                 ", omitQuery='" + omitQuery + '\'' +
-                ", forceConnectionClose='" + forceConnectionClose + '\'' +
                 '}';
     }
 
@@ -308,7 +295,6 @@ public class Realm {
         private boolean useAbsoluteURI = false;
         private boolean omitQuery = false;
         private boolean targetProxy = false;
-        private boolean forceConnectionClose = false;
 
         private static final ThreadLocal<MessageDigest> digestThreadLocal = new ThreadLocal<MessageDigest>() {
             @Override
@@ -485,12 +471,7 @@ public class Realm {
             this.targetProxy = targetProxy;
             return this;
         }
-
-        public RealmBuilder setForceConnectionClose(boolean forceConnectionClose) {
-            this.forceConnectionClose = forceConnectionClose;
-            return this;
-        }
-
+        
         private String parseRawQop(String rawQop) {
             String[] rawServerSupportedQops = rawQop.split(",");
             String[] serverSupportedQops = new String[rawServerSupportedQops.length];
@@ -570,8 +551,7 @@ public class Realm {
                     .setNtlmHost(clone.getNtlmHost())//
                     .setUseAbsoluteURI(clone.isUseAbsoluteURI())//
                     .setOmitQuery(clone.isOmitQuery())//
-                    .setTargetProxy(clone.isTargetProxy())
-                    .setForceConnectionClose(clone.shouldForceConnectionClose());
+                    .setTargetProxy(clone.isTargetProxy());
         }
 
         private void newCnonce(MessageDigest md) {
@@ -725,8 +705,7 @@ public class Realm {
                     opaque,
                     useAbsoluteURI,
                     omitQuery,
-                    targetProxy,
-                    forceConnectionClose);
+                    targetProxy);
         }
     }
 }
