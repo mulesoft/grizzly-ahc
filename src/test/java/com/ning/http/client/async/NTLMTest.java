@@ -43,7 +43,7 @@ import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.eclipse.jetty.server.handler.HandlerWrapper;
 import org.slf4j.Logger;
 import org.testng.Assert;
-import org.testng.annotations.BeforeTest;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 public abstract class NTLMTest extends AbstractBasicTest {
@@ -59,7 +59,9 @@ public abstract class NTLMTest extends AbstractBasicTest {
         public void handle(String pathInContext, org.eclipse.jetty.server.Request request, HttpServletRequest httpRequest,
                 HttpServletResponse httpResponse) throws IOException, ServletException {
 
+            // Register seen client INet addresses. This will uniquely identify them
             seenClients.add(request.getRemoteInetSocketAddress().toString());
+            LOGGER.error("Seen address = {}", request.getRemoteInetSocketAddress());
 
             String authorization = httpRequest.getHeader("Authorization");
             if (authorization == null) {
@@ -83,11 +85,6 @@ public abstract class NTLMTest extends AbstractBasicTest {
             httpResponse.getOutputStream().flush();
             httpResponse.getOutputStream().close();
         }
-    }
-
-    @BeforeTest
-    public void cleanTestWatchers() {
-        seenClients.clear();
     }
 
     @Override
@@ -131,6 +128,21 @@ public abstract class NTLMTest extends AbstractBasicTest {
         }
     }
 
+    private Future<Response> makeNtlmAuthenticatedRequestWithCredentials(RealmBuilder realmBuilder) throws InterruptedException, ExecutionException, IOException {
+        Request request = new RequestBuilder(GET.asString())
+                .setUrl(getTargetUrl())
+                // .setUrl("http://10.250.1.231:5959/")
+                .setRealm(realmBuilder.build())
+                .build();
+
+        return client.executeRequest(request);
+    }
+
+    @BeforeMethod
+    public void cleanTestWatchers() {
+        seenClients.clear();
+    }
+
     @Test
     public void lazyNTLMAuthPostTest() throws IOException, InterruptedException, ExecutionException {
       ntlmAuthTestWithPost(realmBuilderBase());
@@ -152,33 +164,22 @@ public abstract class NTLMTest extends AbstractBasicTest {
     }
 
     @Test
-    public void ntlmSubsequentAuthAgainstRemoteIIS() throws Exception {
-
+    public void ntlmCustomConnectionManagementOnEachCredentialsSet() throws Exception {
         // Build client to be used
         AsyncHttpClientConfig config = new AsyncHttpClientConfig.Builder().build();
         client = getAsyncHttpClient(config);
 
         // Make good request
         Future<Response> responseFuture =  makeNtlmAuthenticatedRequestWithCredentials(realmBuilderBase());
-        LOGGER.error("Making good request");
         Assert.assertEquals(responseFuture.get().getStatusCode(), 200);
 
         // Make bad request
-        responseFuture =  makeNtlmAuthenticatedRequestWithCredentials(realmBuilderBase().setPassword("perro"));
-        LOGGER.error("Making bad request");
+        responseFuture =  makeNtlmAuthenticatedRequestWithCredentials(realmBuilderBase().setPassword("goat"));
         Assert.assertEquals(responseFuture.get().getStatusCode(), 401);
         client.close();
 
+        // Since connection management is handled different in NTLM, this will mean that for each
+        // credentials set, a new connection will be created and managed from that moment on.
         Assert.assertEquals(seenClients.size(), 2);
-    }
-
-    private Future<Response> makeNtlmAuthenticatedRequestWithCredentials(RealmBuilder realmBuilder) throws InterruptedException, ExecutionException, IOException {
-        Request request = new RequestBuilder(GET.asString())
-                .setUrl(getTargetUrl())
-                // .setUrl("http://10.250.1.231:5959/")
-                .setRealm(realmBuilder.build())
-                .build();
-
-        return client.executeRequest(request);
     }
 }
