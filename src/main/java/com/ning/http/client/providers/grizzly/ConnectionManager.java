@@ -137,17 +137,11 @@ class ConnectionManager {
         Endpoint endpoint = endpointMap.get(partitionId);
         if (endpoint == null) {
             final boolean isSecure = Utils.isSecure(scheme);
-            if (request.getRealm() != null &&
-                request.getRealm().getScheme().equals(Realm.AuthScheme.NTLM)) {
-                endpoint = new NtlmAuthenticatedAhcEndpoint(partitionId,
-                                                            isSecure, request.getInetAddress(), host, port, request.getLocalAddress(),
-                                                            defaultConnectionHandler, request.getRealm());
-            } else {
-                endpoint = new AhcEndpoint(partitionId,
-                                           isSecure, request.getInetAddress(), host, port, request.getLocalAddress(),
-                                           defaultConnectionHandler);
-            }
-
+            // Note that a different endpoint POJO is not needed for the authenticated endpoints, since
+            // the "real" identifier used in the (in it's hashcode impl.) is the partitionId.
+            endpoint = new AhcEndpoint(partitionId,
+                                       isSecure, request.getInetAddress(), host, port, request.getLocalAddress(),
+                                       defaultConnectionHandler);
             endpointMap.put(partitionId, endpoint);
         }
 
@@ -236,6 +230,8 @@ class ConnectionManager {
                    request.getConnectionPoolPartitioning()
                            .getPartitionKey(request.getUri(), proxyServer).toString();
 
+        // In the NTLM case, add in the partitionId the authentication credentials, since one
+        // connection per target-credentials pair should be used.
         if (request.getRealm() != null &&
             request.getRealm().getScheme().equals(Realm.AuthScheme.NTLM)) {
             Realm requestRealm = request.getRealm();
@@ -270,16 +266,6 @@ class ConnectionManager {
             }
         }
         return port;
-    }
-
-    private class NtlmAuthenticatedAhcEndpoint extends AhcEndpoint {
-
-        private final Realm authenticationRealm;
-
-        private NtlmAuthenticatedAhcEndpoint(String partitionId, boolean isSecure, InetAddress remoteOverrideAddress, String host, int port, InetAddress localAddress, ConnectorHandler<SocketAddress> connectorHandler, Realm realm) {
-            super(partitionId, isSecure, remoteOverrideAddress, host, port, localAddress, connectorHandler);
-            this.authenticationRealm = realm;
-        }
     }
 
     private class AhcEndpoint extends Endpoint<SocketAddress> {
