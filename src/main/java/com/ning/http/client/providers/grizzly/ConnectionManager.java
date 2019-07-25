@@ -234,7 +234,7 @@ class ConnectionManager {
                    request.getConnectionPoolPartitioning()
                            .getPartitionKey(request.getUri(), proxyServer).toString();
 
-        // In the NTLM case, add in the partitionId the authentication credentials, since one
+        // In the NTLM case, add the authentication credentials in the partition id, since one
         // connection per target-credentials pair should be used.
         if (request.getRealm() != null &&
             request.getRealm().getScheme().equals(Realm.AuthScheme.NTLM)) {
@@ -260,13 +260,6 @@ class ConnectionManager {
         }
 
         return partitionId;
-    }
-
-    private static String getPartitionIdForNtlm(InetAddress overrideAddress, Request request,
-                                         ProxyServer proxyServer) {
-        return (overrideAddress != null ? overrideAddress.toString() + "_" : "") +
-               request.getConnectionPoolPartitioning()
-                       .getPartitionKey(request.getUri(), proxyServer).toString();
     }
 
     private static int getPort(final String scheme, final int p) {

@@ -13,6 +13,8 @@
  */
 package com.ning.http.client.async;
 
+import static javax.servlet.http.HttpServletResponse.SC_OK;
+import static javax.servlet.http.HttpServletResponse.SC_UNAUTHORIZED;
 import static org.apache.commons.io.IOUtils.toByteArray;
 import static org.eclipse.jetty.http.HttpMethod.GET;
 import static org.eclipse.jetty.http.HttpMethod.POST;
@@ -48,10 +50,10 @@ import org.testng.annotations.Test;
 
 public abstract class NTLMTest extends AbstractBasicTest {
 
-    private static final String PAYLOAD = "PAYLOAD";
-    private AsyncHttpClient client;
     private static final Logger LOGGER = getLogger(NTLMTest.class);
     private static final Set<String> seenClients = new HashSet<>();
+    private static final String PAYLOAD = "PAYLOAD";
+    private AsyncHttpClient client;
 
     public static class NTLMHandler extends HandlerWrapper {
 
@@ -131,7 +133,6 @@ public abstract class NTLMTest extends AbstractBasicTest {
     private Future<Response> makeNtlmAuthenticatedRequestWithCredentials(RealmBuilder realmBuilder) throws InterruptedException, ExecutionException, IOException {
         Request request = new RequestBuilder(GET.asString())
                 .setUrl(getTargetUrl())
-                // .setUrl("http://10.250.1.231:5959/")
                 .setRealm(realmBuilder.build())
                 .build();
 
@@ -171,11 +172,11 @@ public abstract class NTLMTest extends AbstractBasicTest {
 
         // Make good request
         Future<Response> responseFuture =  makeNtlmAuthenticatedRequestWithCredentials(realmBuilderBase());
-        Assert.assertEquals(responseFuture.get().getStatusCode(), 200);
+        Assert.assertEquals(responseFuture.get().getStatusCode(), SC_OK);
 
         // Make bad request
         responseFuture =  makeNtlmAuthenticatedRequestWithCredentials(realmBuilderBase().setPassword("goat"));
-        Assert.assertEquals(responseFuture.get().getStatusCode(), 401);
+        Assert.assertEquals(responseFuture.get().getStatusCode(), SC_UNAUTHORIZED);
         client.close();
 
         // Since connection management is handled different in NTLM, this will mean that for each
