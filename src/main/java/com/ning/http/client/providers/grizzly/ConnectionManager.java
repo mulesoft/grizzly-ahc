@@ -18,11 +18,15 @@ import com.ning.http.client.Realm;
 import com.ning.http.client.Request;
 import com.ning.http.client.uri.Uri;
 import com.ning.http.util.ProxyUtils;
+import com.ning.http.util.StringUtils;
 
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.charset.Charset;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
@@ -235,12 +239,24 @@ class ConnectionManager {
         if (request.getRealm() != null &&
             request.getRealm().getScheme().equals(Realm.AuthScheme.NTLM)) {
             Realm requestRealm = request.getRealm();
-            partitionId = partitionId
-                    .concat("_")
+            String partitionIdCredentialsTail = requestRealm.getPrincipal()
                     .concat(requestRealm.getPrincipal())
                     .concat(requestRealm.getPassword())
                     .concat(requestRealm.getNtlmDomain())
                     .concat(requestRealm.getNtlmHost());
+
+            try {
+                // Use a SHA-256 hash to encrypt the NTLM credentials use as connection storage key
+                // No salt should be added since that storage is used as cache, so the key should
+                // allow connection retrieval
+                MessageDigest sha256Digester = MessageDigest.getInstance("SHA-256");
+                sha256Digester.update(partitionIdCredentialsTail.getBytes(Charset.forName("UTF-8")));
+                partitionIdCredentialsTail = StringUtils.toHexString(sha256Digester.digest());
+                partitionId = partitionId.concat(partitionIdCredentialsTail);
+            }
+            catch (NoSuchAlgorithmException e) {
+                e.printStackTrace();
+            }
         }
 
         return partitionId;
