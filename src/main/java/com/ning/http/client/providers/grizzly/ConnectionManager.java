@@ -14,19 +14,26 @@ package com.ning.http.client.providers.grizzly;
 
 import com.ning.http.client.AsyncHttpClientConfig;
 import com.ning.http.client.ProxyServer;
+import com.ning.http.client.Realm;
 import com.ning.http.client.Request;
 import com.ning.http.client.uri.Uri;
 import com.ning.http.util.ProxyUtils;
+import com.ning.http.util.StringUtils;
+
 import java.io.IOException;
 import java.net.InetAddress;
 import java.net.InetSocketAddress;
 import java.net.SocketAddress;
+import java.nio.charset.Charset;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Locale;
 import java.util.Map;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
+
 import org.glassfish.grizzly.CompletionHandler;
 import org.glassfish.grizzly.Connection;
 import org.glassfish.grizzly.ConnectorHandler;
@@ -53,7 +60,7 @@ class ConnectionManager {
 
     private final boolean poolingEnabled;
     private final MultiEndpointPool<SocketAddress> pool;
-    
+
     private final TCPNIOTransport transport;
     private final TCPNIOConnectorHandler defaultConnectionHandler;
     private final AsyncHttpClientConfig config;
@@ -65,14 +72,14 @@ class ConnectionManager {
     ConnectionManager(final GrizzlyAsyncHttpProvider provider,
             final TCPNIOTransport transport,
             final GrizzlyAsyncHttpProviderConfig providerConfig) {
-        
+
         this.transport = transport;
         config = provider.getClientConfig();
         this.poolingEnabled = config.isAllowPoolingConnections();
         this.poolingSSLConnections = config.isAllowPoolingSslConnections();
-        
+
         defaultConnectionHandler = TCPNIOConnectorHandler.builder(transport).build();
-        
+
         if (providerConfig != null && providerConfig.getConnectionPool() != null) {
             pool = providerConfig.getConnectionPool();
         } else {
@@ -112,9 +119,9 @@ class ConnectionManager {
     void openAsync(final Request request,
             final CompletionHandler<Connection> completionHandler)
             throws IOException {
-        
+
         final ProxyServer proxy = ProxyUtils.getProxyServer(config, request);
-        
+
         final String scheme;
         final String host;
         final int port;
@@ -128,15 +135,17 @@ class ConnectionManager {
             host = uri.getHost();
             port = getPort(scheme, uri.getPort());
         }
-        
-        final String partitionId = getPartitionId(request.getInetAddress(), request, proxy);
+
+        String partitionId = getPartitionId(request.getInetAddress(), request, proxy);
+
         Endpoint endpoint = endpointMap.get(partitionId);
         if (endpoint == null) {
             final boolean isSecure = Utils.isSecure(scheme);
+            // Note that a different endpoint POJO is not needed for the authenticated endpoints, since
+            // the "real" identifier used (in its hashcode impl.) is the partitionId.
             endpoint = new AhcEndpoint(partitionId,
-                    isSecure, request.getInetAddress(), host, port, request.getLocalAddress(),
-                    defaultConnectionHandler);
-
+                                       isSecure, request.getInetAddress(), host, port, request.getLocalAddress(),
+                                       defaultConnectionHandler);
             endpointMap.put(partitionId, endpoint);
         }
 
@@ -145,9 +154,9 @@ class ConnectionManager {
 
     Connection openSync(final Request request)
             throws IOException {
-        
+
         final ProxyServer proxy = ProxyUtils.getProxyServer(config, request);
-        
+
         final String scheme;
         final String host;
         final int port;
@@ -161,9 +170,9 @@ class ConnectionManager {
             host = uri.getHost();
             port = getPort(scheme, uri.getPort());
         }
-        
+
         final boolean isSecure = Utils.isSecure(scheme);
-        
+
         final String partitionId = getPartitionId(request.getInetAddress(), request, proxy);
         Endpoint endpoint = endpointMap.get(partitionId);
         if (endpoint == null) {
@@ -175,7 +184,7 @@ class ConnectionManager {
         }
 
         Connection c = pool.poll(endpoint);
-        
+
         if (c == null) {
             final Future<Connection> future =
                     defaultConnectionHandler.connect(
@@ -214,16 +223,43 @@ class ConnectionManager {
         final ConnectionInfo<SocketAddress> ci = pool.getConnectionInfo(c);
         return ci != null && ci.isReady();
     }
-    
+
     static boolean isKeepAlive(final Connection connection) {
         return !IS_NOT_KEEP_ALIVE.isSet(connection);
     }
-    
+
     private static String getPartitionId(InetAddress overrideAddress, Request request,
             ProxyServer proxyServer) {
-        return (overrideAddress != null ? overrideAddress.toString() + "_" : "") + 
-            request.getConnectionPoolPartitioning()
-             .getPartitionKey(request.getUri(), proxyServer).toString();
+        String partitionId = (overrideAddress != null ? overrideAddress.toString() + "_" : "") +
+                   request.getConnectionPoolPartitioning()
+                           .getPartitionKey(request.getUri(), proxyServer).toString();
+
+        // In the NTLM case, add the authentication credentials in the partition id, since one
+        // connection per target-credentials pair should be used.
+        if (request.getRealm() != null &&
+            request.getRealm().getScheme().equals(Realm.AuthScheme.NTLM)) {
+            Realm requestRealm = request.getRealm();
+            String partitionIdCredentialsTail = requestRealm.getPrincipal()
+                    .concat(requestRealm.getPrincipal())
+                    .concat(requestRealm.getPassword())
+                    .concat(requestRealm.getNtlmDomain())
+                    .concat(requestRealm.getNtlmHost());
+
+            try {
+                // Use a SHA-256 hash to encrypt the NTLM credentials use as connection storage key
+                // No salt should be added since that storage is used as cache, so the key should
+                // allow connection retrieval
+                MessageDigest sha256Digester = MessageDigest.getInstance("SHA-256");
+                sha256Digester.update(partitionIdCredentialsTail.getBytes(Charset.forName("UTF-8")));
+                partitionIdCredentialsTail = StringUtils.toHexString(sha256Digester.digest());
+                partitionId = partitionId.concat(partitionIdCredentialsTail);
+            }
+            catch (NoSuchAlgorithmException e) {
+                e.printStackTrace();
+            }
+        }
+
+        return partitionId;
     }
 
     private static int getPort(final String scheme, final int p) {
@@ -250,13 +286,13 @@ class ConnectionManager {
         private final int port;
         private final InetAddress localAddress;
         private final ConnectorHandler<SocketAddress> connectorHandler;
-        
+
         private AhcEndpoint(final String partitionId,
                 final boolean isSecure,
                 final InetAddress remoteOverrideAddress, final String host, final int port,
                 final InetAddress localAddress,
                 final ConnectorHandler<SocketAddress> connectorHandler) {
-            
+
             this.partitionId = partitionId;
             this.isSecure = isSecure;
             this.remoteOverrideAddress = remoteOverrideAddress;
@@ -269,7 +305,7 @@ class ConnectionManager {
         public boolean isSecure() {
             return isSecure;
         }
-        
+
         @Override
         public Object getId() {
             return partitionId;
@@ -308,7 +344,7 @@ class ConnectionManager {
                             : null, completionHandler, true, true);
 		}
     }
-    
+
     private class NoSSLPoolCustomizer
             implements MultiEndpointPool.EndpointPoolCustomizer<SocketAddress> {
 
@@ -320,6 +356,6 @@ class ConnectionManager {
                 builder.keepAliveTimeout(0, TimeUnit.SECONDS); // don't pool
             }
         }
-        
+
     }
 } // END ConnectionManager

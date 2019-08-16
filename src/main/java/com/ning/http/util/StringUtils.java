@@ -18,6 +18,10 @@ import java.nio.charset.Charset;
 
 public final class StringUtils {
 
+    // lookup tables needed for toHexString(byte[], boolean)
+    private static final String HEX_CHARACTERS = "0123456789abcdef";
+    private static final String HEX_CHARACTERS_UC = HEX_CHARACTERS.toUpperCase();
+
     private static final ThreadLocal<StringBuilder> STRING_BUILDERS = new ThreadLocal<StringBuilder>() {
         protected StringBuilder initialValue() {
             return new StringBuilder(512);
@@ -51,5 +55,37 @@ public final class StringUtils {
     public static byte[] charSequence2Bytes(CharSequence sb, Charset charset) {
         ByteBuffer bb = charSequence2ByteBuffer(sb, charset);
         return byteBuffer2ByteArray(bb);
+    }
+
+    /**
+     * @see #toHexString(byte[])
+     */
+    public static String toHexString(byte[] bytes) {
+        return StringUtils.toHexString(bytes, false);
+    }
+
+    /**
+     * Convert a byte array to a hexadecimal string.
+     *
+     * @param bytes     The bytes to format.
+     * @param uppercase When <code>true</code> creates uppercase hex characters instead of lowercase (the default).
+     * @return A hexadecimal representation of the specified bytes.
+     */
+    public static String toHexString(byte[] bytes, boolean uppercase) {
+        if (bytes == null) {
+            return null;
+        }
+
+        int numBytes = bytes.length;
+        StringBuilder str = new StringBuilder(numBytes * 2);
+
+        String table = (uppercase ? HEX_CHARACTERS_UC : HEX_CHARACTERS);
+
+        for (int i = 0; i < numBytes; i++) {
+            str.append(table.charAt(bytes[i] >>> 4 & 0x0f));
+            str.append(table.charAt(bytes[i] & 0x0f));
+        }
+
+        return str.toString();
     }
 }
