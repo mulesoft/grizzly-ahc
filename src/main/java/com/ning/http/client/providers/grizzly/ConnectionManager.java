@@ -142,7 +142,7 @@ class ConnectionManager {
         if (endpoint == null) {
             final boolean isSecure = Utils.isSecure(scheme);
             // Note that a different endpoint POJO is not needed for the authenticated endpoints, since
-            // the "real" identifier used in the (in it's hashcode impl.) is the partitionId.
+            // the "real" identifier used (in its hashcode impl.) is the partitionId.
             endpoint = new AhcEndpoint(partitionId,
                                        isSecure, request.getInetAddress(), host, port, request.getLocalAddress(),
                                        defaultConnectionHandler);
