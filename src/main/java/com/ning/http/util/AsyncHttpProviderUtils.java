@@ -23,8 +23,11 @@ import com.ning.http.client.Request;
 import com.ning.http.client.uri.Uri;
 
 import java.io.ByteArrayInputStream;
+import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.ObjectInputStream;
+import java.io.ObjectOutputStream;
 import java.io.UnsupportedEncodingException;
 import java.nio.ByteBuffer;
 import java.nio.charset.Charset;
@@ -37,7 +40,19 @@ import java.util.List;
  */
 public class AsyncHttpProviderUtils {
 
-    public static final IOException REMOTELY_CLOSED_EXCEPTION = buildStaticIOException("Remotely closed");
+    public static IOException REMOTELY_CLOSED_EXCEPTION = buildStaticIOException("Remotely closed");
+    
+    static {
+      // This was done to avoid classloader references through the backtrace transient field.
+      try {
+        ByteArrayOutputStream buffer = new ByteArrayOutputStream();
+        new ObjectOutputStream(buffer).writeObject(REMOTELY_CLOSED_EXCEPTION);
+        REMOTELY_CLOSED_EXCEPTION =
+            (IOException) new ObjectInputStream(new ByteArrayInputStream(buffer.toByteArray())).readObject();
+      } catch (Exception e) {
+        throw new RuntimeException("Exception on cleaning Remotely Closed Exception backtrace", e);
+      }
+    }
 
     public final static Charset DEFAULT_CHARSET = ISO_8859_1;
 
