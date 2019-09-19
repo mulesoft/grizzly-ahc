@@ -101,6 +101,11 @@ public class Cookie {
     private final long maxAge;
     private final boolean secure;
     private final boolean httpOnly;
+    // Hold the creation time (in seconds) of the http cookie for later
+    // expiration calculation
+    private final long whenCreated;
+
+    private static final long MAX_AGE_UNSPECIFIED = -1;
 
     public Cookie(String name, String value, boolean wrap, String domain, String path, long maxAge, boolean secure, boolean httpOnly) {
         this.name = name;
@@ -111,6 +116,7 @@ public class Cookie {
         this.maxAge = maxAge;
         this.secure = secure;
         this.httpOnly = httpOnly;
+        this.whenCreated = System.currentTimeMillis();
     }
 
     public String getDomain() {
@@ -136,6 +142,21 @@ public class Cookie {
     @Deprecated
     public long getExpires() {
         return Long.MIN_VALUE;
+    }
+
+    public boolean hasExpired() {
+        if (maxAge == 0) return true;
+
+        // if not specify max-age, this cookie should be
+        // discarded when user agent is to be closed, but
+        // it is not expired.
+        if (maxAge == MAX_AGE_UNSPECIFIED) return false;
+
+        long deltaSecond = (System.currentTimeMillis() - whenCreated) / 1000;
+        if (deltaSecond > maxAge)
+            return true;
+        else
+            return false;
     }
     
     public long getMaxAge() {

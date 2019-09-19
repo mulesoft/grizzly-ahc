@@ -34,6 +34,8 @@ import java.net.URISyntaxException;
 import java.util.Collection;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
+
 import org.glassfish.grizzly.Connection;
 import org.glassfish.grizzly.Grizzly;
 import org.glassfish.grizzly.attributes.Attribute;
@@ -473,7 +475,7 @@ final class AsyncHttpClientFilter extends BaseFilter {
     }
 
     private void addCookies(final Request request, final HttpRequestPacket requestPacket) {
-        final Collection<Cookie> cookies = request.getCookies();
+        final Collection<Cookie> cookies = request.getCookies().stream().filter((Cookie c) -> !c.hasExpired()).collect(Collectors.toList());
         if (MiscUtils.isNonEmpty(cookies)) {
             StringBuilder sb = new StringBuilder(128);
             org.glassfish.grizzly.http.Cookie[] gCookies = new org.glassfish.grizzly.http.Cookie[cookies.size()];
