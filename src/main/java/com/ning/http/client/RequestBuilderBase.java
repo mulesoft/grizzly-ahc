@@ -29,11 +29,8 @@ import com.ning.http.util.UriEncoder;
 import java.io.File;
 import java.io.InputStream;
 import java.net.InetAddress;
-import java.util.ArrayList;
-import java.util.Collection;
-import java.util.Collections;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 /**
  * Builder for {@link Request}
@@ -135,8 +132,12 @@ public abstract class RequestBuilderBase<T extends RequestBuilderBase<T>> {
         }
 
         @Override
-        public Collection<Cookie> getCookies() {
-            return cookies != null ? Collections.unmodifiableCollection(cookies) : Collections.<Cookie> emptyList();
+        public List<Cookie> getCookies() {
+            List cookiesList = new ArrayList();
+            for (Cookie c : cookies) {
+                cookiesList.add(c);
+            }
+            return cookiesList;
         }
 
         @Override

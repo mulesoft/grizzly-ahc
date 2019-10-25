@@ -465,6 +465,42 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
     }
 
     @Test(groups = { "standalone", "default_provider", "async" })
+    public void asyncDoGetCookieExpiredCookiesRemovedTest() throws Throwable {
+        try (AsyncHttpClient client = getAsyncHttpClient(null)) {
+            final CountDownLatch l = new CountDownLatch(1);
+            FluentCaseInsensitiveStringsMap h = new FluentCaseInsensitiveStringsMap();
+            h.add("Test1", "Test1");
+            h.add("Test2", "Test2");
+            h.add("Test3", "Test3");
+            h.add("Test4", "Test4");
+            h.add("Test5", "Test5");
+
+            final Cookie cookie = new Cookie("cookie1", "myCookie", false, "/", "/", -1L, false, false);
+            final Cookie expiredCookie = new Cookie("cookie2", "myExpCookie", false, "/", "/", 0, false, false);
+
+            client.prepareGet(getTargetUrl()).setHeaders(h).addCookie(cookie).addCookie(expiredCookie).execute(new AsyncCompletionHandlerAdapter() {
+
+                @Override
+                public Response onCompleted(Response response) throws Exception {
+                    try {
+                        assertEquals(response.getStatusCode(), 200);
+                        List<Cookie> cookies = response.getCookies();
+                        assertEquals(cookies.size(), 1);
+                        assertEquals(cookies.get(0).toString(), "cookie1=myCookie");
+                    } finally {
+                        l.countDown();
+                    }
+                    return response;
+                }
+            }).get();
+
+            if (!l.await(TIMEOUT, TimeUnit.SECONDS)) {
+                Assert.fail("Timeout out");
+            }
+        }
+    }
+
+    @Test(groups = { "standalone", "default_provider", "async" })
     public void asyncDoPostDefaultContentType() throws Throwable {
         try (AsyncHttpClient client = getAsyncHttpClient(null)) {
             final CountDownLatch l = new CountDownLatch(1);
