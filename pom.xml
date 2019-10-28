@@ -261,7 +261,7 @@
                 <configuration>
                     <signature>
                         <groupId>org.codehaus.mojo.signature</groupId>
-                        <artifactId>java18</artifactId>
+                        <artifactId>java17</artifactId>
                         <version>1.0</version>
                     </signature>
                     <ignores>
@@ -270,7 +270,7 @@
                 </configuration>
                 <executions>
                     <execution>
-                        <id>check-java-1.8-compat</id>
+                        <id>check-java-1.7-compat</id>
                         <phase>process-classes</phase>
                         <goals>
                             <goal>check</goal>

@@ -31,9 +31,10 @@ import com.ning.http.util.MiscUtils;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.*;
-import java.util.stream.Collectors;
-
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.List;
+import java.util.Map;
 import org.glassfish.grizzly.Connection;
 import org.glassfish.grizzly.Grizzly;
 import org.glassfish.grizzly.attributes.Attribute;
@@ -473,34 +474,29 @@ final class AsyncHttpClientFilter extends BaseFilter {
     }
 
     private void addCookies(final Request request, final HttpRequestPacket requestPacket) {
-        List<Cookie> cookies = request.getCookies();
-        List<Cookie> filteredCookies = new ArrayList<>();
-        //Filter expired cookies:
-        for (int i=0; i < cookies.size(); i++){
-            if (!cookies.get(i).hasExpired()) {
-                filteredCookies.add(cookies.get(i));
+        final Collection<Cookie> cookies = request.getCookies();
+        List<org.glassfish.grizzly.http.Cookie> finalCookiesList = new ArrayList<>();
+        for (final Cookie cookie : cookies) {
+            if (!cookie.hasExpired()) {
+                finalCookiesList.add(new org.glassfish.grizzly.http.Cookie(cookie.getName(), cookie.getValue()));
             }
         }
-
-        LoggerFactory.getLogger("GRIZZLY_LOGGER").info(String.format("Adding %s to %s",filteredCookies, request));
-
-
-        if (MiscUtils.isNonEmpty(filteredCookies)) {
+        if (MiscUtils.isNonEmpty(finalCookiesList)) {
             StringBuilder sb = new StringBuilder(128);
-            org.glassfish.grizzly.http.Cookie[] gCookies = new org.glassfish.grizzly.http.Cookie[filteredCookies.size()];
-            convertCookies(filteredCookies, gCookies);
+            org.glassfish.grizzly.http.Cookie[] gCookies = new org.glassfish.grizzly.http.Cookie[finalCookiesList.size()];
+            convertCookies(finalCookiesList, gCookies);
             CookieSerializerUtils.serializeClientCookies(sb, gCookies);
             requestPacket.addHeader(Header.Cookie, sb.toString());
         }
     }
 
-    private void convertCookies(final List<Cookie> cookies, final org.glassfish.grizzly.http.Cookie[] gCookies) {
+    private void convertCookies(final List<org.glassfish.grizzly.http.Cookie> cookies, final org.glassfish.grizzly.http.Cookie[] gCookies) {
         int idx = 0;
-        for (final Cookie cookie : cookies) {
-            gCookies[idx++] = new org.glassfish.grizzly.http.Cookie(cookie.getName(), cookie.getValue());
+        for (final org.glassfish.grizzly.http.Cookie cookie : cookies) {
+            gCookies[idx++] = cookie;
         }
     }
-    
+
     private void setupKeepAlive(final HttpRequestPacket request,
             final Connection connection) {
         request.getProcessingState().setKeepAlive(

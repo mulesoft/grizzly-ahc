@@ -70,7 +70,7 @@ public interface Request {
      *
      * @return an unmodifiable Collection of Cookies
      */
-    List<Cookie> getCookies();
+    Collection<Cookie> getCookies();
 
     /**
      * Return the current request's body as a byte array

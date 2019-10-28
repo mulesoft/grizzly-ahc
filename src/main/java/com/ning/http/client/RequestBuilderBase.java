@@ -29,8 +29,11 @@ import com.ning.http.util.UriEncoder;
 import java.io.File;
 import java.io.InputStream;
 import java.net.InetAddress;
-import java.util.*;
-import java.util.stream.Collectors;
+import java.util.ArrayList;
+import java.util.Collection;
+import java.util.Collections;
+import java.util.List;
+import java.util.Map;
 
 /**
  * Builder for {@link Request}
@@ -132,15 +135,8 @@ public abstract class RequestBuilderBase<T extends RequestBuilderBase<T>> {
         }
 
         @Override
-        public List<Cookie> getCookies() {
-            List cookiesList = new ArrayList();
-            if (cookies == null) {
-                return cookiesList;
-            }
-            for (int i = 0; i < cookies.size(); i++) {
-                cookiesList.add(cookies.get(i));
-            }
-            return cookiesList;
+        public Collection<Cookie> getCookies() {
+            return cookies != null ? Collections.unmodifiableCollection(cookies) : Collections.<Cookie> emptyList();
         }
 
         @Override
@@ -378,7 +374,6 @@ public abstract class RequestBuilderBase<T extends RequestBuilderBase<T>> {
     }
 
     public T addOrReplaceCookie(Cookie cookie) {
-        LoggerFactory.getLogger("GRIZZLY_LOGGER").info(String.format("Adding or replacing cookie %s = %s ", cookie.getName(), cookie.getValue()));
         String cookieKey = cookie.getName();
         boolean replace = false;
         int index = 0;
@@ -392,14 +387,11 @@ public abstract class RequestBuilderBase<T extends RequestBuilderBase<T>> {
             index++;
         }
         if (cookie.hasExpired()) {
-            LoggerFactory.getLogger("GRIZZLY_LOGGER").info(String.format("Filtering expired cookie %s = %s age %s", cookie.getName(), cookie.getValue(), cookie.getMaxAge()));
             return derived.cast(this);
         }
         if (replace) {
-            LoggerFactory.getLogger("GRIZZLY_LOGGER").info(String.format("Replacing cookie %s = %s", cookie.getName(), cookie.getValue()));
             request.cookies.set(index, cookie);
         } else {
-            LoggerFactory.getLogger("GRIZZLY_LOGGER").info(String.format("Adding cookie %s = %s", cookie.getName(), cookie.getValue()));
             request.cookies.add(cookie);
         }
         return derived.cast(this);
