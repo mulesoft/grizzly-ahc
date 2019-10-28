@@ -134,8 +134,11 @@ public abstract class RequestBuilderBase<T extends RequestBuilderBase<T>> {
         @Override
         public List<Cookie> getCookies() {
             List cookiesList = new ArrayList();
-            for (Cookie c : cookies) {
-                cookiesList.add(c);
+            if (cookies == null) {
+                return cookiesList;
+            }
+            for (int i = 0; i < cookies.size(); i++) {
+                cookiesList.add(cookies.get(i));
             }
             return cookiesList;
         }
@@ -375,6 +378,7 @@ public abstract class RequestBuilderBase<T extends RequestBuilderBase<T>> {
     }
 
     public T addOrReplaceCookie(Cookie cookie) {
+        LoggerFactory.getLogger("GRIZZLY_LOGGER").info(String.format("Adding or replacing cookie %s = %s ", cookie.getName(), cookie.getValue()));
         String cookieKey = cookie.getName();
         boolean replace = false;
         int index = 0;
@@ -387,10 +391,17 @@ public abstract class RequestBuilderBase<T extends RequestBuilderBase<T>> {
 
             index++;
         }
-        if (replace)
+        if (cookie.hasExpired()) {
+            LoggerFactory.getLogger("GRIZZLY_LOGGER").info(String.format("Filtering expired cookie %s = %s age %s", cookie.getName(), cookie.getValue(), cookie.getMaxAge()));
+            return derived.cast(this);
+        }
+        if (replace) {
+            LoggerFactory.getLogger("GRIZZLY_LOGGER").info(String.format("Replacing cookie %s = %s", cookie.getName(), cookie.getValue()));
             request.cookies.set(index, cookie);
-        else
+        } else {
+            LoggerFactory.getLogger("GRIZZLY_LOGGER").info(String.format("Adding cookie %s = %s", cookie.getName(), cookie.getValue()));
             request.cookies.add(cookie);
+        }
         return derived.cast(this);
     }
     

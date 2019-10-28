@@ -31,10 +31,7 @@ import com.ning.http.util.MiscUtils;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.util.Collection;
-import java.util.List;
-import java.util.Map;
-import java.util.Iterator;
+import java.util.*;
 import java.util.stream.Collectors;
 
 import org.glassfish.grizzly.Connection;
@@ -476,12 +473,22 @@ final class AsyncHttpClientFilter extends BaseFilter {
     }
 
     private void addCookies(final Request request, final HttpRequestPacket requestPacket) {
-        List<Cookie> cookies = request.getCookies().stream().filter(c -> !c.hasExpired()).collect(Collectors.toList());
+        List<Cookie> cookies = request.getCookies();
+        List<Cookie> filteredCookies = new ArrayList<>();
+        //Filter expired cookies:
+        for (int i=0; i < cookies.size(); i++){
+            if (!cookies.get(i).hasExpired()) {
+                filteredCookies.add(cookies.get(i));
+            }
+        }
 
-        if (MiscUtils.isNonEmpty(cookies)) {
+        LoggerFactory.getLogger("GRIZZLY_LOGGER").info(String.format("Adding %s to %s",filteredCookies, request));
+
+
+        if (MiscUtils.isNonEmpty(filteredCookies)) {
             StringBuilder sb = new StringBuilder(128);
-            org.glassfish.grizzly.http.Cookie[] gCookies = new org.glassfish.grizzly.http.Cookie[cookies.size()];
-            convertCookies(cookies, gCookies);
+            org.glassfish.grizzly.http.Cookie[] gCookies = new org.glassfish.grizzly.http.Cookie[filteredCookies.size()];
+            convertCookies(filteredCookies, gCookies);
             CookieSerializerUtils.serializeClientCookies(sb, gCookies);
             requestPacket.addHeader(Header.Cookie, sb.toString());
         }

@@ -12,7 +12,11 @@
  */
 package com.ning.http.client.cookie;
 
+import org.slf4j.LoggerFactory;
+
 public class Cookie {
+
+    private static final long MAX_AGE_UNSPECIFIED = Long.MIN_VALUE;
 
     /**
      * @param expires parameter will be ignored.
@@ -98,14 +102,13 @@ public class Cookie {
     private final boolean wrap;
     private final String domain;
     private final String path;
-    private final long maxAge;
+    private long maxAge = MAX_AGE_UNSPECIFIED;
     private final boolean secure;
     private final boolean httpOnly;
     // Hold the creation time (in seconds) of the http cookie for later
     // expiration calculation
     private final long whenCreated;
 
-    private static final long MAX_AGE_UNSPECIFIED = -1;
 
     public Cookie(String name, String value, boolean wrap, String domain, String path, long maxAge, boolean secure, boolean httpOnly) {
         this.name = name;
@@ -150,13 +153,16 @@ public class Cookie {
         // if not specify max-age, this cookie should be
         // discarded when user agent is to be closed, but
         // it is not expired.
-        if (maxAge == MAX_AGE_UNSPECIFIED) return false;
+        if (maxAge == MAX_AGE_UNSPECIFIED){
+            LoggerFactory.getLogger("GRIZZLY_LOGGER").info(String.format("%s=%s - MAX AGE UNSPECIFIED!", this.name, this.value));
+            return false;
+        }
 
         long deltaSecond = (System.currentTimeMillis() - whenCreated) / 1000;
-        if (deltaSecond > maxAge)
-            return true;
-        else
-            return false;
+
+        LoggerFactory.getLogger("GRIZZLY_LOGGER").info(String.format("%s=%s - DELTA SECS(when - time): %d - %d!", this.name, this.value, whenCreated, time));
+
+        return deltaSecond > maxAge;
     }
     
     public long getMaxAge() {
