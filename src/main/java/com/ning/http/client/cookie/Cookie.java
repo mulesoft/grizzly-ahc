@@ -154,14 +154,10 @@ public class Cookie {
         // discarded when user agent is to be closed, but
         // it is not expired.
         if (maxAge == MAX_AGE_UNSPECIFIED){
-            LoggerFactory.getLogger("GRIZZLY_LOGGER").info(String.format("%s=%s - MAX AGE UNSPECIFIED!", this.name, this.value));
             return false;
         }
 
         long deltaSecond = (System.currentTimeMillis() - whenCreated) / 1000;
-
-        LoggerFactory.getLogger("GRIZZLY_LOGGER").info(String.format("%s=%s - DELTA SECS(when - time): %d - %d!", this.name, this.value, whenCreated, time));
-
         return deltaSecond > maxAge;
     }
     
