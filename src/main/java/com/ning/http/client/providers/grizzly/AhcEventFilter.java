@@ -813,7 +813,6 @@ final class AhcEventFilter extends HttpClientFilter {
         }
         
         final RequestBuilder builder = new RequestBuilder(prototype);
-        //builder.setBody(ctx.getAhcRequest().getByteData());
         if (asGet) {
             builder.setMethod("GET");
         }
