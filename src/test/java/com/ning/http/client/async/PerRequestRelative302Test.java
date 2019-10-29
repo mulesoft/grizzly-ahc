@@ -35,11 +35,11 @@ import javax.servlet.http.HttpServletResponse;
 import java.io.IOException;
 import java.net.ConnectException;
 import java.util.Map;
-import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static java.util.Arrays.asList;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
@@ -135,8 +135,8 @@ public abstract class PerRequestRelative302Test extends AbstractBasicTest {
             assertEquals(response.getStatusCode(), 200);
 
             assertNotNull(cookies);
-            assertTrue(Arrays.asList(cookies).size() == 1);
-            Cookie cookie = Arrays.asList(cookies).get(0);
+            assertTrue(asList(cookies).size() == 1);
+            Cookie cookie = asList(cookies).get(0);
             assertTrue(cookie.getName().equals(WORKING_COOKIE_NAME));
             assertTrue(cookie.getValue().equals(WORKING_COOKIE_VALUE));
         }
