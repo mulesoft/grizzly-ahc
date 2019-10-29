@@ -12,8 +12,6 @@
  */
 package com.ning.http.client.cookie;
 
-import org.slf4j.LoggerFactory;
-
 public class Cookie {
 
     private static final long MAX_AGE_UNSPECIFIED = Long.MIN_VALUE;
