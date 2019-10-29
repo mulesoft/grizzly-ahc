@@ -377,9 +377,6 @@ public abstract class RequestBuilderBase<T extends RequestBuilderBase<T>> {
         lazyInitCookies();
 
         for (Cookie c : request.cookies) {
-            // since we are already
-            // inspecting cookies,
-            // removed expired ones
             if (c.hasExpired()) {
                 request.cookies.remove(c);
             }
