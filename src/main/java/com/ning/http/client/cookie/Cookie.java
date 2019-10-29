@@ -12,6 +12,8 @@
  */
 package com.ning.http.client.cookie;
 
+import static java.lang.System.currentTimeMillis;
+
 public class Cookie {
 
     private static final long MAX_AGE_UNSPECIFIED = Long.MIN_VALUE;
@@ -100,7 +102,7 @@ public class Cookie {
     private final boolean wrap;
     private final String domain;
     private final String path;
-    private long maxAge = MAX_AGE_UNSPECIFIED;
+    private long maxAge;
     private final boolean secure;
     private final boolean httpOnly;
     // Hold the creation time (in seconds) of the http cookie for later
@@ -117,7 +119,7 @@ public class Cookie {
         this.maxAge = maxAge;
         this.secure = secure;
         this.httpOnly = httpOnly;
-        this.whenCreated = System.currentTimeMillis();
+        this.whenCreated = currentTimeMillis();
     }
 
     public String getDomain() {

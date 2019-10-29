@@ -373,25 +373,29 @@ public abstract class RequestBuilderBase<T extends RequestBuilderBase<T>> {
         return derived.cast(this);
     }
 
-    public T addOrReplaceCookie(Cookie cookie) {
-        String cookieKey = cookie.getName();
-        boolean replace = false;
-        int index = 0;
+    public void cleanExpiredCookies() {
         lazyInitCookies();
-        for (Cookie c : request.cookies) {
-            if (c.getName().equals(cookieKey)) {
-                replace = true;
-                break;
-            }
 
-            index++;
+        for (Cookie c : request.cookies) {
+            // since we are already
+            // inspecting cookies,
+            // removed expired ones
+            if (c.hasExpired()) {
+                request.cookies.remove(c);
+            }
         }
-        if (cookie.hasExpired()) {
-            return derived.cast(this);
+    }
+
+    public T addOrReplaceCookie(Cookie cookie) {
+        int index = -1;
+        lazyInitCookies();
+
+        cleanExpiredCookies();
+        if (request.cookies.contains(cookie)) {
+            index = request.cookies.indexOf(cookie);
         }
-        if (replace) {
-            request.cookies.set(index, cookie);
-        } else {
+        // if cookie not found, then add it
+        if (index < 0) {
             request.cookies.add(cookie);
         }
         return derived.cast(this);

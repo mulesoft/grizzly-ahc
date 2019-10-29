@@ -18,6 +18,7 @@ import static com.ning.http.util.AsyncHttpProviderUtils.isSameHostAndProtocol;
 import static com.ning.http.util.AuthenticatorUtils.getHttpHeaderForAuthScheme;
 import static com.ning.http.util.MiscUtils.isNonEmpty;
 
+import com.ning.http.client.cookie.Cookie;
 import com.ning.http.client.providers.grizzly.events.GracefulCloseEvent;
 import com.ning.http.client.providers.grizzly.websocket.GrizzlyWebSocketAdapter;
 import com.ning.http.client.AsyncHandler;
@@ -812,6 +813,7 @@ final class AhcEventFilter extends HttpClientFilter {
         }
         
         final RequestBuilder builder = new RequestBuilder(prototype);
+        //builder.setBody(ctx.getAhcRequest().getByteData());
         if (asGet) {
             builder.setMethod("GET");
         }
@@ -819,7 +821,7 @@ final class AhcEventFilter extends HttpClientFilter {
         for (String cookieStr : response.getHeaders().values(Header.SetCookie)) {
             builder.addOrReplaceCookie(CookieDecoder.decode(cookieStr));
         }
-                
+
         return builder.build();
     }
     
