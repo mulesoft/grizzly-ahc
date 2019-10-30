@@ -43,6 +43,7 @@ import static java.util.Arrays.asList;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
+import static org.glassfish.grizzly.http.util.HttpStatus.OK_200;
 
 public abstract class PerRequestRelative302Test extends AbstractBasicTest {
 
@@ -132,10 +133,10 @@ public abstract class PerRequestRelative302Test extends AbstractBasicTest {
             Response response = client.prepareGet(getTargetUrl()).setFollowRedirects(true).setHeader("X-redirect", getTargetUrl()).addQueryParam(TEST_COOKIES_KEY, TEST_COOKIES_VALUE).execute().get();
 
             assertNotNull(response);
-            assertEquals(response.getStatusCode(), 200);
+            assertEquals(response.getStatusCode(), OK_200.getStatusCode());
 
             assertNotNull(cookies);
-            assertTrue(asList(cookies).size() == 1);
+            assertEquals(asList(cookies).size(), 1);
             Cookie cookie = asList(cookies).get(0);
             assertTrue(cookie.getName().equals(WORKING_COOKIE_NAME));
             assertTrue(cookie.getValue().equals(WORKING_COOKIE_VALUE));

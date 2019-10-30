@@ -476,28 +476,12 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
             final Cookie cookie = new Cookie("cookie1", "myCookie", false, "/", "/", MIN_VALUE, false, false);
             final Cookie expiredCookie = new Cookie("cookie2", "myExpCookie", false, "/", "/", 0, false, false);
 
-            Response response = client.prepareGet(getTargetUrl()).addCookie(cookie).addCookie(expiredCookie).execute(new AsyncCompletionHandlerAdapter() {
+            Response response = client.prepareGet(getTargetUrl()).addCookie(cookie).addCookie(expiredCookie).execute().get(TIMEOUT, SECONDS);
 
-                @Override
-                public Response onCompleted(Response response) {
-                    try {
-                        assertEquals(response.getStatusCode(), OK_200.getStatusCode());
-                        List<Cookie> cookies = response.getCookies();
-                        assertEquals(cookies.size(), 1);
-                        assertEquals(cookies.get(0).toString(), "cookie1=myCookie");
-                    } catch (AssertionError e) {
-                        HttpRequestPacket request = HttpRequestPacket.builder().uri(getTargetUrl()).build();
-                        HttpResponsePacket errorResponse = HttpResponsePacket.builder(request).status(INTERNAL_SERVER_ERROR_500.getStatusCode()).reasonPhrase(e.getMessage()).build();
-                        return new Response.ResponseBuilder().accumulate(new GrizzlyResponseStatus(errorResponse, null, null)).build();
-                    }
-                    return response;
-                }
-
-            }).get(TIMEOUT, SECONDS);
-
-            if (response.getStatusCode() != OK_200.getStatusCode()) {
-                fail(String.format("Test failed: %s", response.getStatusText()));
-            }
+            assertEquals(response.getStatusCode(), OK_200.getStatusCode());
+            List<Cookie> cookies = response.getCookies();
+            assertEquals(cookies.size(), 1);
+            assertEquals(cookies.get(0).toString(), "cookie1=myCookie");
         }
     }
 
