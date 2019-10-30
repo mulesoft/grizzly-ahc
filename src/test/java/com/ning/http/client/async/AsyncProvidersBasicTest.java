@@ -473,8 +473,6 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
     @Test(groups = { "standalone", "default_provider", "async" })
     public void asyncDoGetCookieExpiredCookiesRemovedTest() throws Throwable {
         try (AsyncHttpClient client = getAsyncHttpClient(null)) {
-            final CountDownLatch l = new CountDownLatch(1);
-
             final Cookie cookie = new Cookie("cookie1", "myCookie", false, "/", "/", MIN_VALUE, false, false);
             final Cookie expiredCookie = new Cookie("cookie2", "myExpCookie", false, "/", "/", 0, false, false);
 
@@ -491,17 +489,11 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                         HttpRequestPacket request = HttpRequestPacket.builder().uri(getTargetUrl()).build();
                         HttpResponsePacket errorResponse = HttpResponsePacket.builder(request).status(INTERNAL_SERVER_ERROR_500.getStatusCode()).reasonPhrase(e.getMessage()).build();
                         return new Response.ResponseBuilder().accumulate(new GrizzlyResponseStatus(errorResponse, null, null)).build();
-                    } finally {
-                        l.countDown();
                     }
                     return response;
                 }
 
-            }).get();
-
-            if (!l.await(TIMEOUT, SECONDS)) {
-                fail("Test timeout!");
-            }
+            }).get(TIMEOUT, SECONDS);
 
             if (response.getStatusCode() != OK_200.getStatusCode()) {
                 fail(String.format("Test failed: %s", response.getStatusText()));
