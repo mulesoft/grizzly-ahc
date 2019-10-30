@@ -102,7 +102,7 @@ public class Cookie {
     private final boolean wrap;
     private final String domain;
     private final String path;
-    private long maxAge;
+    private final long maxAge;
     private final boolean secure;
     private final boolean httpOnly;
     // Hold the creation time (in seconds) of the http cookie for later
@@ -148,16 +148,20 @@ public class Cookie {
     }
 
     public boolean hasExpired() {
+        // If max-age is not specified,
+        // this cookie should be discarded
+        // when user agent is to be closed
+        // but it is not expired.
         if (maxAge == 0) return true;
 
-        // if not specify max-age, this cookie should be
+        // if not specified max-age, this cookie should be
         // discarded when user agent is to be closed, but
         // it is not expired.
-        if (maxAge == MAX_AGE_UNSPECIFIED){
+        if (maxAge == MAX_AGE_UNSPECIFIED) {
             return false;
         }
 
-        long deltaSecond = (System.currentTimeMillis() - whenCreated) / 1000;
+        long deltaSecond = (currentTimeMillis() - whenCreated) / 1000;
         return deltaSecond > maxAge;
     }
     
