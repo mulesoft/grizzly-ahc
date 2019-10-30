@@ -23,7 +23,14 @@ import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static java.lang.Long.MIN_VALUE;
+import static org.glassfish.grizzly.http.util.HttpStatus.OK_200;
+import static org.glassfish.grizzly.http.util.HttpStatus.INTERNAL_SERVER_ERROR_500;
 
+import com.ning.http.client.providers.grizzly.GrizzlyResponseStatus;
+import org.glassfish.grizzly.http.HttpRequestPacket;
+import org.glassfish.grizzly.http.HttpResponsePacket;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -60,7 +67,6 @@ import java.util.concurrent.CancellationException;
 import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -153,8 +159,8 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                 @Override
                 public Response onCompleted(Response response) throws Exception {
                     try {
-                        assertEquals(response.getStatusCode(), 200);
                         int contentLenght = -1;
+                        assertEquals(response.getStatusCode(), OK_200.getStatusCode());
                         if (response.getHeader("content-length") != null) {
                             contentLenght = Integer.valueOf(response.getHeader("content-length"));
                         }
@@ -177,7 +183,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
 
             }).get();
 
-            if (!l.await(TIMEOUT, TimeUnit.SECONDS)) {
+            if (!l.await(TIMEOUT, SECONDS)) {
                 Assert.fail("Timeout out");
             }
         }
@@ -193,7 +199,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                 @Override
                 public Response onCompleted(Response response) throws Exception {
                     try {
-                        assertEquals(response.getStatusCode(), 200);
+                        assertEquals(response.getStatusCode(), OK_200.getStatusCode());
                         assertEquals(response.getContentType(), TEXT_HTML_UTF_8);
                     } finally {
                         l.countDown();
@@ -201,7 +207,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                     return response;
                 }
             }).get();
-            if (!l.await(TIMEOUT, TimeUnit.SECONDS)) {
+            if (!l.await(TIMEOUT, SECONDS)) {
                 Assert.fail("Timeout out");
             }
         }
@@ -217,7 +223,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                 @Override
                 public Response onCompleted(Response response) throws Exception {
                     try {
-                        assertEquals(response.getStatusCode(), 200);
+                        assertEquals(response.getStatusCode(), OK_200.getStatusCode());
                         assertEquals(response.getContentType(), TEXT_HTML_UTF_8);
                     } finally {
                         l.countDown();
@@ -226,7 +232,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                 }
             }).get();
 
-            if (!l.await(TIMEOUT, TimeUnit.SECONDS)) {
+            if (!l.await(TIMEOUT, SECONDS)) {
                 Assert.fail("Timeout out");
             }
         }
@@ -250,7 +256,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                 public Response onCompleted(Response response) throws Exception {
                     try {
                         System.out.println(">>>>> " + response.getStatusText());
-                        assertEquals(response.getStatusCode(), 200);
+                        assertEquals(response.getStatusCode(), OK_200.getStatusCode());
                         for (int i = 1; i < 5; i++) {
                             assertEquals(response.getHeader("X-Test" + i), "Test" + i);
                         }
@@ -261,7 +267,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                 }
             }).get();
 
-            if (!l.await(TIMEOUT, TimeUnit.SECONDS)) {
+            if (!l.await(TIMEOUT, SECONDS)) {
                 Assert.fail("Timeout out");
             }
         }
@@ -284,7 +290,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                 @Override
                 public Response onCompleted(Response response) throws Exception {
                     try {
-                        assertEquals(response.getStatusCode(), 200);
+                        assertEquals(response.getStatusCode(), OK_200.getStatusCode());
                         for (int i = 1; i < 5; i++) {
                             System.out.println(">>>>> " + response.getHeader("X-param_" + i));
                             assertEquals(response.getHeader("X-param_" + i), "value_" + i);
@@ -297,7 +303,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                 }
             }).get();
 
-            if (!l.await(TIMEOUT, TimeUnit.SECONDS)) {
+            if (!l.await(TIMEOUT, SECONDS)) {
                 Assert.fail("Timeout out");
             }
         }
@@ -313,7 +319,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                 @Override
                 public Response onCompleted(Response response) throws Exception {
                     try {
-                        assertEquals(response.getStatusCode(), 200);
+                        assertEquals(response.getStatusCode(), OK_200.getStatusCode());
                     } finally {
                         l.countDown();
                     }
@@ -328,7 +334,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                 fail();
             }
 
-            if (!l.await(TIMEOUT, TimeUnit.SECONDS)) {
+            if (!l.await(TIMEOUT, SECONDS)) {
                 Assert.fail("Timeout out");
             }
         }
@@ -356,7 +362,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                 }
             }).get();
 
-            if (!l.await(10 * 5 * 1000, TimeUnit.SECONDS)) {
+            if (!l.await(10 * 5 * 1000, SECONDS)) {
                 Assert.fail("Timeout out");
             }
             Assert.assertNull(responseRef.get(), "Got a Response while expecting a Throwable");
@@ -384,7 +390,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                 @Override
                 public Response onCompleted(Response response) throws Exception {
                     try {
-                        assertEquals(response.getStatusCode(), 200);
+                        assertEquals(response.getStatusCode(), OK_200.getStatusCode());
                         assertEquals(response.getHeader("Transfer-Encoding"), "chunked");
                     } finally {
                         l.countDown();
@@ -393,7 +399,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                 }
             }).get();
 
-            if (!l.await(TIMEOUT, TimeUnit.SECONDS)) {
+            if (!l.await(TIMEOUT, SECONDS)) {
                 Assert.fail("Timeout out");
             }
         }
@@ -414,7 +420,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                 @Override
                 public Response onCompleted(Response response) throws Exception {
                     try {
-                        assertEquals(response.getStatusCode(), 200);
+                        assertEquals(response.getStatusCode(), OK_200.getStatusCode());
                         for (int i = 1; i < 5; i++) {
                             assertEquals(response.getHeader("X-Test" + i), "Test" + i);
                         }
@@ -424,7 +430,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                     return response;
                 }
             }).get();
-            if (!l.await(TIMEOUT, TimeUnit.SECONDS)) {
+            if (!l.await(TIMEOUT, SECONDS)) {
                 Assert.fail("Timeout out");
             }
         }
@@ -441,13 +447,13 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
             h.add("Test4", "Test4");
             h.add("Test5", "Test5");
 
-            final Cookie coo = new Cookie("foo", "value", false, "/", "/", -1L, false, false);
+            final Cookie coo = new Cookie("foo", "value", false, "/", "/", MIN_VALUE, false, false);
             client.prepareGet(getTargetUrl()).setHeaders(h).addCookie(coo).execute(new AsyncCompletionHandlerAdapter() {
 
                 @Override
                 public Response onCompleted(Response response) throws Exception {
                     try {
-                        assertEquals(response.getStatusCode(), 200);
+                        assertEquals(response.getStatusCode(), OK_200.getStatusCode());
                         List<Cookie> cookies = response.getCookies();
                         assertEquals(cookies.size(), 1);
                         assertEquals(cookies.get(0).toString(), "foo=value");
@@ -458,9 +464,24 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                 }
             }).get();
 
-            if (!l.await(TIMEOUT, TimeUnit.SECONDS)) {
+            if (!l.await(TIMEOUT, SECONDS)) {
                 Assert.fail("Timeout out");
             }
+        }
+    }
+
+    @Test(groups = { "standalone", "default_provider", "async" })
+    public void asyncDoGetCookieExpiredCookiesRemovedTest() throws Throwable {
+        try (AsyncHttpClient client = getAsyncHttpClient(null)) {
+            final Cookie cookie = new Cookie("cookie1", "myCookie", false, "/", "/", MIN_VALUE, false, false);
+            final Cookie expiredCookie = new Cookie("cookie2", "myExpCookie", false, "/", "/", 0, false, false);
+
+            Response response = client.prepareGet(getTargetUrl()).addCookie(cookie).addCookie(expiredCookie).execute().get(TIMEOUT, SECONDS);
+
+            assertEquals(response.getStatusCode(), OK_200.getStatusCode());
+            List<Cookie> cookies = response.getCookies();
+            assertEquals(cookies.size(), 1);
+            assertEquals(cookies.get(0).toString(), "cookie1=myCookie");
         }
     }
 
@@ -473,7 +494,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                 @Override
                 public Response onCompleted(Response response) throws Exception {
                     try {
-                        assertEquals(response.getStatusCode(), 200);
+                        assertEquals(response.getStatusCode(), OK_200.getStatusCode());
                         FluentCaseInsensitiveStringsMap h = response.getHeaders();
                         assertEquals(h.getJoinedValue("X-Content-Type", ", "), "application/x-www-form-urlencoded");
                     } finally {
@@ -483,7 +504,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                 }
             }).get();
 
-            if (!l.await(TIMEOUT, TimeUnit.SECONDS)) {
+            if (!l.await(TIMEOUT, SECONDS)) {
                 Assert.fail("Timeout out");
             }
         }
@@ -519,7 +540,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                 @Override
                 public Response onCompleted(Response response) throws Exception {
                     try {
-                        assertEquals(response.getStatusCode(), 200);
+                        assertEquals(response.getStatusCode(), OK_200.getStatusCode());
                         for (int i = 1; i < 5; i++) {
                             System.out.println(">>>>> " + response.getHeader("X-param_" + i));
                             assertEquals(response.getHeader("X-param_" + i), "value_" + i);
@@ -532,7 +553,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                 }
             }).get();
 
-            if (!l.await(TIMEOUT, TimeUnit.SECONDS)) {
+            if (!l.await(TIMEOUT, SECONDS)) {
                 Assert.fail("Timeout out");
             }
         }
@@ -560,7 +581,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                 @Override
                 public Response onCompleted(Response response) throws Exception {
                     try {
-                        assertEquals(response.getStatusCode(), 200);
+                        assertEquals(response.getStatusCode(), OK_200.getStatusCode());
                         for (int i = 1; i < 5; i++) {
                             System.out.println(">>>>> " + response.getHeader("X-param_" + i));
                             assertEquals(response.getHeader("X-param_" + i), "value_" + i);
@@ -572,7 +593,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                     return response;
                 }
             }).get();
-            if (!l.await(TIMEOUT, TimeUnit.SECONDS)) {
+            if (!l.await(TIMEOUT, SECONDS)) {
                 Assert.fail("Timeout out");
             }
         }
@@ -600,7 +621,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                 @Override
                 public Response onCompleted(Response response) throws Exception {
                     try {
-                        assertEquals(response.getStatusCode(), 200);
+                        assertEquals(response.getStatusCode(), OK_200.getStatusCode());
                         for (int i = 1; i < 5; i++) {
                             System.out.println(">>>>> " + response.getHeader("X-param_" + i));
                             assertEquals(response.getHeader("X-param_" + i), "value_" + i);
@@ -612,7 +633,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                     return response;
                 }
             }).get();
-            if (!l.await(TIMEOUT, TimeUnit.SECONDS)) {
+            if (!l.await(TIMEOUT, SECONDS)) {
                 Assert.fail("Timeout out");
             }
         }
@@ -641,7 +662,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                     return response;
                 }
             }).get();
-            if (!l.await(TIMEOUT, TimeUnit.SECONDS)) {
+            if (!l.await(TIMEOUT, SECONDS)) {
                 Assert.fail("Timeout out");
             }
         }
@@ -671,7 +692,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                 @Override
                 public Response onCompleted(Response response) throws Exception {
                     try {
-                        assertEquals(response.getStatusCode(), 200);
+                        assertEquals(response.getStatusCode(), OK_200.getStatusCode());
                         assertEquals(response.getHeader("X-Accept-Encoding"), generatedAcceptEncodingHeader());
                     } finally {
                         l.countDown();
@@ -679,7 +700,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                     return response;
                 }
             }).get();
-            if (!l.await(TIMEOUT, TimeUnit.SECONDS)) {
+            if (!l.await(TIMEOUT, SECONDS)) {
                 Assert.fail("Timeout out");
             }
         }
@@ -713,7 +734,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                         }
                     }).get();
 
-            assertEquals(response.getStatusCode(), 200);
+            assertEquals(response.getStatusCode(), OK_200.getStatusCode());
             assertEquals(response.getHeader("X-Connection"), "keep-alive");
         }
     }
@@ -733,7 +754,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
 
             Response response = client.executeRequest(request, new AsyncCompletionHandlerAdapter()).get();
 
-            assertEquals(response.getStatusCode(), 200);
+            assertEquals(response.getStatusCode(), OK_200.getStatusCode());
             if (response.getHeader("X-Host").startsWith("localhost")) {
                 assertEquals(response.getHeader("X-Host"), "localhost:" + port1);
             } else {
@@ -760,7 +781,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
             Response response = client.preparePut(getTargetUrl()).setHeaders(h).setBody(sb.toString())
                     .execute(new AsyncCompletionHandlerAdapter()).get();
 
-            assertEquals(response.getStatusCode(), 200);
+            assertEquals(response.getStatusCode(), OK_200.getStatusCode());
         }
     }
 
@@ -785,7 +806,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                 @Override
                 public Response onCompleted(Response response) throws Exception {
                     try {
-                        assertEquals(response.getStatusCode(), 200);
+                        assertEquals(response.getStatusCode(), OK_200.getStatusCode());
                         for (int i = 1; i < 5; i++) {
                             System.out.println(">>>>> " + response.getHeader("X-param_" + i));
                             assertEquals(response.getHeader("X-param_" + i), "value_" + i);
@@ -798,7 +819,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                 }
             });
 
-            if (!l.await(TIMEOUT, TimeUnit.SECONDS)) {
+            if (!l.await(TIMEOUT, SECONDS)) {
                 Assert.fail("Timeout out");
             }
         }
@@ -824,7 +845,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
             // sucks!
             Thread.sleep(1000);
             future.cancel(true);
-            future.get(TIMEOUT, TimeUnit.SECONDS);
+            future.get(TIMEOUT, SECONDS);
         }
     }
 
@@ -846,7 +867,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                             }
                         });
 
-                future.get(10, TimeUnit.SECONDS);
+                future.get(10, SECONDS);
             } catch (ExecutionException ex) {
                 if (ex.getCause() instanceof TimeoutException) {
                     Assert.assertTrue(true);
@@ -879,7 +900,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
 
             Response response = future.get();
             Assert.assertNotNull(response);
-            assertEquals(response.getStatusCode(), 200);
+            assertEquals(response.getStatusCode(), OK_200.getStatusCode());
         }
     }
 
@@ -904,7 +925,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                 @Override
                 public Response onCompleted(Response response) throws Exception {
                     try {
-                        assertEquals(response.getStatusCode(), 200);
+                        assertEquals(response.getStatusCode(), OK_200.getStatusCode());
                     } finally {
                         l.countDown();
                     }
@@ -912,7 +933,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                 }
             });
 
-            if (!l.await(TIMEOUT, TimeUnit.SECONDS)) {
+            if (!l.await(TIMEOUT, SECONDS)) {
                 Assert.fail("Latch time out");
             }
         }
@@ -1004,7 +1025,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                 }
             });
 
-            if (!l.await(TIMEOUT, TimeUnit.SECONDS)) {
+            if (!l.await(TIMEOUT, SECONDS)) {
                 Assert.fail("Timed out");
             }
         }
@@ -1026,7 +1047,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                 }
             });
 
-            if (!l.await(TIMEOUT, TimeUnit.SECONDS)) {
+            if (!l.await(TIMEOUT, SECONDS)) {
                 fail("Timed out");
             }
 
@@ -1075,7 +1096,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
             }).get();
 
             Assert.assertNotNull(response);
-            assertEquals(response.getStatusCode(), 200);
+            assertEquals(response.getStatusCode(), OK_200.getStatusCode());
         }
     }
 
@@ -1120,7 +1141,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                 @Override
                 public Response onCompleted(Response response) throws Exception {
                     try {
-                        assertEquals(response.getStatusCode(), 200);
+                        assertEquals(response.getStatusCode(), OK_200.getStatusCode());
                     } finally {
                         l.countDown();
                     }
@@ -1132,7 +1153,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                 }
             });
 
-            if (!l.await(TIMEOUT, TimeUnit.SECONDS)) {
+            if (!l.await(TIMEOUT, SECONDS)) {
                 Assert.fail("Timed out");
             }
         }
@@ -1162,7 +1183,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                 }
             });
 
-            if (!l.await(TIMEOUT, TimeUnit.SECONDS)) {
+            if (!l.await(TIMEOUT, SECONDS)) {
                 Assert.fail("Timed out");
             }
         }
@@ -1203,7 +1224,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                 }
             });
 
-            if (!l.await(TIMEOUT, TimeUnit.SECONDS)) {
+            if (!l.await(TIMEOUT, SECONDS)) {
                 Assert.fail("Timed out");
             }
         }
@@ -1233,7 +1254,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
 
             client.executeRequest(req, handler).get();
 
-            if (!l.await(TIMEOUT, TimeUnit.SECONDS)) {
+            if (!l.await(TIMEOUT, SECONDS)) {
                 Assert.fail("Timed out");
             }
         }
@@ -1251,7 +1272,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
 
                 @Override
                 public Response onCompleted(Response response) throws Exception {
-                    assertEquals(response.getStatusCode(), 200);
+                    assertEquals(response.getStatusCode(), OK_200.getStatusCode());
                     if (remoteAddr == null) {
                         remoteAddr = response.getHeader("X-KEEP-ALIVE");
                         l.countDown();
@@ -1267,7 +1288,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
             client.prepareGet(getTargetUrl()).execute(handler).get();
             client.prepareGet(getTargetUrl()).execute(handler);
 
-            if (!l.await(TIMEOUT, TimeUnit.SECONDS)) {
+            if (!l.await(TIMEOUT, SECONDS)) {
                 Assert.fail("Timed out");
             }
         }
@@ -1300,7 +1321,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
 
             client.prepareGet("http://google.com/").execute(handler);
 
-            if (!l.await(TIMEOUT, TimeUnit.SECONDS)) {
+            if (!l.await(TIMEOUT, SECONDS)) {
                 Assert.fail("Timed out");
             }
         }
@@ -1339,7 +1360,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
 
             client.prepareGet("http://www.google.com/").execute(handler);
 
-            if (!l.await(TIMEOUT, TimeUnit.SECONDS)) {
+            if (!l.await(TIMEOUT, SECONDS)) {
                 Assert.fail("Timed out");
             }
         }
@@ -1370,7 +1391,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
         try (AsyncHttpClient client = getAsyncHttpClient(new Builder().build())) {
             Response r = client.prepareOptions(getTargetUrl()).execute().get();
 
-            assertEquals(r.getStatusCode(), 200);
+            assertEquals(r.getStatusCode(), OK_200.getStatusCode());
             assertEquals(r.getHeader("Allow"), "GET,HEAD,POST,OPTIONS,TRACE");
         }
     }
@@ -1477,7 +1498,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
         try (AsyncHttpClient client = getAsyncHttpClient(new AsyncHttpClientConfigBean().setUserAgent("test"))) {
             AsyncHttpClient.BoundRequestBuilder builder = client.prepareGet(getTargetUrl());
             Response r = client.executeRequest(builder.build()).get();
-            assertEquals(200, r.getStatusCode());
+            assertEquals(OK_200.getStatusCode(), r.getStatusCode());
         }
     }
 
@@ -1485,7 +1506,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
     public void bodyAsByteTest() throws Throwable {
         try (AsyncHttpClient client = getAsyncHttpClient(new Builder().build())) {
             Response r = client.prepareGet(getTargetUrl()).execute().get();
-            assertEquals(r.getStatusCode(), 200);
+            assertEquals(r.getStatusCode(), OK_200.getStatusCode());
             assertEquals(r.getResponseBodyAsBytes(), new byte[] {});
         }
     }
@@ -1494,7 +1515,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
     public void mirrorByteTest() throws Throwable {
         try (AsyncHttpClient client = getAsyncHttpClient(null)) {
             Response r = client.preparePost(getTargetUrl()).setBody("MIRROR").execute().get();
-            assertEquals(r.getStatusCode(), 200);
+            assertEquals(r.getStatusCode(), OK_200.getStatusCode());
             assertEquals(new String(r.getResponseBodyAsBytes(), "UTF-8"), "MIRROR");
         }
     }
@@ -1523,7 +1544,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                 @Override
                 public Response onCompleted(Response response) throws Exception {
                     try {
-                        assertEquals(response.getStatusCode(), 200);
+                        assertEquals(response.getStatusCode(), OK_200.getStatusCode());
                         assertEquals(response.getHeader("Upgrade"), "h2,h2c");
                     } finally {
                         l.countDown();
@@ -1531,7 +1552,7 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
                     return response;
                 }
             }).get();
-            if (!l.await(TIMEOUT, TimeUnit.SECONDS)) {
+            if (!l.await(TIMEOUT, SECONDS)) {
                 Assert.fail("Timeout out");
             }
         }

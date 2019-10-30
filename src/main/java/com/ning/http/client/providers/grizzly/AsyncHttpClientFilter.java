@@ -32,6 +32,7 @@ import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.util.Collection;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import org.glassfish.grizzly.Connection;
@@ -474,22 +475,28 @@ final class AsyncHttpClientFilter extends BaseFilter {
 
     private void addCookies(final Request request, final HttpRequestPacket requestPacket) {
         final Collection<Cookie> cookies = request.getCookies();
-        if (MiscUtils.isNonEmpty(cookies)) {
+        List<org.glassfish.grizzly.http.Cookie> finalCookiesList = new ArrayList<>();
+        for (final Cookie cookie : cookies) {
+            if (!cookie.hasExpired()) {
+                finalCookiesList.add(new org.glassfish.grizzly.http.Cookie(cookie.getName(), cookie.getValue()));
+            }
+        }
+        if (MiscUtils.isNonEmpty(finalCookiesList)) {
             StringBuilder sb = new StringBuilder(128);
-            org.glassfish.grizzly.http.Cookie[] gCookies = new org.glassfish.grizzly.http.Cookie[cookies.size()];
-            convertCookies(cookies, gCookies);
+            org.glassfish.grizzly.http.Cookie[] gCookies = new org.glassfish.grizzly.http.Cookie[finalCookiesList.size()];
+            convertCookies(finalCookiesList, gCookies);
             CookieSerializerUtils.serializeClientCookies(sb, gCookies);
             requestPacket.addHeader(Header.Cookie, sb.toString());
         }
     }
 
-    private void convertCookies(final Collection<Cookie> cookies, final org.glassfish.grizzly.http.Cookie[] gCookies) {
+    private void convertCookies(final List<org.glassfish.grizzly.http.Cookie> cookies, final org.glassfish.grizzly.http.Cookie[] gCookies) {
         int idx = 0;
-        for (final Cookie cookie : cookies) {
-            gCookies[idx++] = new org.glassfish.grizzly.http.Cookie(cookie.getName(), cookie.getValue());
+        for (final org.glassfish.grizzly.http.Cookie cookie : cookies) {
+            gCookies[idx++] = cookie;
         }
     }
-    
+
     private void setupKeepAlive(final HttpRequestPacket request,
             final Connection connection) {
         request.getProcessingState().setKeepAlive(

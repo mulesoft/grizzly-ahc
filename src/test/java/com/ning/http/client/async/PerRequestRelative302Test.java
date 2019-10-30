@@ -28,23 +28,34 @@ import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
 import javax.servlet.ServletException;
+import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import java.io.IOException;
 import java.net.ConnectException;
+import java.util.Map;
 import java.util.Enumeration;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicBoolean;
 
+import static java.util.Arrays.asList;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertTrue;
+import static org.glassfish.grizzly.http.util.HttpStatus.OK_200;
 
 public abstract class PerRequestRelative302Test extends AbstractBasicTest {
 
     // FIXME super NOT threadsafe!!!
     private final AtomicBoolean isSet = new AtomicBoolean(false);
+    private static final String TEST_COOKIES_KEY = "Test";
+    private static final String TEST_COOKIES_VALUE = "Cookies";
+    private static final String WORKING_COOKIE_NAME = "MyWorkingCookie";
+    private static final String WORKING_COOKIE_VALUE = "workingvalue";
+
+    private static Cookie[] cookies;
+
 
     private class Relative302Handler extends HandlerWrapper {
 
@@ -53,6 +64,13 @@ public abstract class PerRequestRelative302Test extends AbstractBasicTest {
             String param;
             httpResponse.setContentType("text/html; charset=utf-8");
             Enumeration<?> e = httpRequest.getHeaderNames();
+            Map<String, String[]> qparams = httpRequest.getParameterMap();
+
+            if (qparams.containsKey(TEST_COOKIES_KEY) && TEST_COOKIES_VALUE.startsWith(qparams.get(TEST_COOKIES_KEY)[0])) {
+                httpResponse.addHeader("Set-Cookie", WORKING_COOKIE_NAME + "=" + WORKING_COOKIE_VALUE + ";path=/");
+                httpResponse.addHeader("Set-Cookie", "MyExpiredCookie=deleted;expires=Thu, 01-Jan-1970 00:00:01 GMT;path=/");
+            }
+
             while (e.hasMoreElements()) {
                 param = e.nextElement().toString();
 
@@ -64,6 +82,8 @@ public abstract class PerRequestRelative302Test extends AbstractBasicTest {
                     return;
                 }
             }
+
+            cookies = httpRequest.getCookies();
             httpResponse.setStatus(200);
             httpResponse.getOutputStream().flush();
             httpResponse.getOutputStream().close();
@@ -102,6 +122,24 @@ public abstract class PerRequestRelative302Test extends AbstractBasicTest {
             String baseUrl = getBaseUrl(response.getUri());
 
             assertTrue(baseUrl.matches(anyWebPage), "response baseUrl \'" + baseUrl +"\' does not show redirection to " + anyWebPage);
+        }
+    }
+
+    @Test(groups = { "online", "default_provider" })
+    public void redirected302WithCookiesTest() throws Throwable {
+        isSet.getAndSet(false);
+        try (AsyncHttpClient client = getAsyncHttpClient(null)) {
+            // once
+            Response response = client.prepareGet(getTargetUrl()).setFollowRedirects(true).setHeader("X-redirect", getTargetUrl()).addQueryParam(TEST_COOKIES_KEY, TEST_COOKIES_VALUE).execute().get();
+
+            assertNotNull(response);
+            assertEquals(response.getStatusCode(), OK_200.getStatusCode());
+
+            assertNotNull(cookies);
+            assertEquals(asList(cookies).size(), 1);
+            Cookie cookie = asList(cookies).get(0);
+            assertTrue(cookie.getName().equals(WORKING_COOKIE_NAME));
+            assertTrue(cookie.getValue().equals(WORKING_COOKIE_VALUE));
         }
     }
 

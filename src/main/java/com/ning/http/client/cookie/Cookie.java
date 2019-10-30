@@ -12,7 +12,11 @@
  */
 package com.ning.http.client.cookie;
 
+import static java.lang.System.currentTimeMillis;
+
 public class Cookie {
+
+    private static final long MAX_AGE_UNSPECIFIED = Long.MIN_VALUE;
 
     /**
      * @param expires parameter will be ignored.
@@ -101,6 +105,10 @@ public class Cookie {
     private final long maxAge;
     private final boolean secure;
     private final boolean httpOnly;
+    // Hold the creation time (in seconds) of the http cookie for later
+    // expiration calculation
+    private final long whenCreated;
+
 
     public Cookie(String name, String value, boolean wrap, String domain, String path, long maxAge, boolean secure, boolean httpOnly) {
         this.name = name;
@@ -111,6 +119,7 @@ public class Cookie {
         this.maxAge = maxAge;
         this.secure = secure;
         this.httpOnly = httpOnly;
+        this.whenCreated = currentTimeMillis();
     }
 
     public String getDomain() {
@@ -136,6 +145,24 @@ public class Cookie {
     @Deprecated
     public long getExpires() {
         return Long.MIN_VALUE;
+    }
+
+    public boolean hasExpired() {
+        // If max-age is not specified,
+        // this cookie should be discarded
+        // when user agent is to be closed
+        // but it is not expired.
+        if (maxAge == 0) return true;
+
+        // if not specified max-age, this cookie should be
+        // discarded when user agent is to be closed, but
+        // it is not expired.
+        if (maxAge == MAX_AGE_UNSPECIFIED) {
+            return false;
+        }
+
+        long deltaSecond = (currentTimeMillis() - whenCreated) / 1000;
+        return deltaSecond > maxAge;
     }
     
     public long getMaxAge() {

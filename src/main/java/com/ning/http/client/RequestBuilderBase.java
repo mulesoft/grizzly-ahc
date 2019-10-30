@@ -373,23 +373,28 @@ public abstract class RequestBuilderBase<T extends RequestBuilderBase<T>> {
         return derived.cast(this);
     }
 
-    public T addOrReplaceCookie(Cookie cookie) {
-        String cookieKey = cookie.getName();
-        boolean replace = false;
-        int index = 0;
+    public void cleanExpiredCookies() {
         lazyInitCookies();
+        ArrayList<Cookie> filteredCookies = new ArrayList<>();
         for (Cookie c : request.cookies) {
-            if (c.getName().equals(cookieKey)) {
-                replace = true;
-                break;
+            if (!c.hasExpired()) {
+                filteredCookies.add(c);
             }
-
-            index++;
         }
-        if (replace)
+        request.cookies = filteredCookies;
+    }
+
+    public T addOrReplaceCookie(Cookie cookie) {
+        int index = -1;
+        lazyInitCookies();
+
+        if (request.cookies.contains(cookie)) {
+            index = request.cookies.indexOf(cookie);
             request.cookies.set(index, cookie);
-        else
+        } else {
+            // if cookie not found, then add it
             request.cookies.add(cookie);
+        }
         return derived.cast(this);
     }
     
@@ -647,6 +652,7 @@ public abstract class RequestBuilderBase<T extends RequestBuilderBase<T>> {
     }
 
     public Request build() {
+        cleanExpiredCookies();
         executeSignatureCalculator();
         computeFinalUri();
         computeRequestCharset();
