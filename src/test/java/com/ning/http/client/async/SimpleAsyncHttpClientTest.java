@@ -265,9 +265,23 @@ public abstract class SimpleAsyncHttpClientTest extends AbstractBasicTest {
 
     @Test(groups = { "standalone", "default_provider" })
     public void testMultiPartPut() throws Exception {
+        testMultiPartPutWithCharset(getContentDispositionHeader());
+    }
+    
+    @Test(groups = { "standalone", "default_provider" })
+    public void testMultiPartPost() throws Exception {
+        testMultiPartPostCharSet(getContentDispositionHeader());
+    }
+
+    protected String getContentDispositionHeader() {
+        return "baPart";
+    }
+    
+    private void testMultiPartPutWithCharset(String dispositionHeaderName) throws InterruptedException, ExecutionException, IOException
+    {
         SimpleAsyncHttpClient client = new SimpleAsyncHttpClient.Builder().setProviderClass(getProviderClass()).setUrl(getTargetUrl() + "/multipart").build();
         try {
-            Response response = client.put(new ByteArrayPart("baPart", "testMultiPart".getBytes(UTF_8), "application/test", UTF_8, "fileName")).get();
+            Response response = client.put(new ByteArrayPart(dispositionHeaderName, "testMultiPart".getBytes(UTF_8), "application/test", UTF_8, "fileName")).get();
 
             String body = response.getResponseBody();
             String contentType = response.getHeader("X-Content-Type");
@@ -280,18 +294,20 @@ public abstract class SimpleAsyncHttpClientTest extends AbstractBasicTest {
             assertTrue(body.trim().endsWith("--" + boundary + "--"));
             assertTrue(body.contains("Content-Disposition:"));
             assertTrue(body.contains("Content-Type: application/test"));
-            assertTrue(body.contains("name=\"baPart"));
+            assertTrue(body.contains("name=\"" + dispositionHeaderName));
             assertTrue(body.contains("filename=\"fileName"));
         } finally {
             client.close();
         }
     }
 
-    @Test(groups = { "standalone", "default_provider" })
-    public void testMultiPartPost() throws Exception {
+
+
+    private void testMultiPartPostCharSet(String dispositionHeaderName) throws InterruptedException, ExecutionException, IOException
+    {
         SimpleAsyncHttpClient client = new SimpleAsyncHttpClient.Builder().setProviderClass(getProviderClass()).setUrl(getTargetUrl() + "/multipart").build();
         try {
-            Response response = client.post(new ByteArrayPart("baPart", "testMultiPart".getBytes(UTF_8), "application/test", UTF_8, "fileName")).get();
+            Response response = client.post(new ByteArrayPart(dispositionHeaderName, "testMultiPart".getBytes(UTF_8), "application/test", UTF_8, "fileName")).get();
 
             String body = response.getResponseBody();
             String contentType = response.getHeader("X-Content-Type");
@@ -304,7 +320,7 @@ public abstract class SimpleAsyncHttpClientTest extends AbstractBasicTest {
             assertTrue(body.trim().endsWith("--" + boundary + "--"));
             assertTrue(body.contains("Content-Disposition:"));
             assertTrue(body.contains("Content-Type: application/test"));
-            assertTrue(body.contains("name=\"baPart"));
+            assertTrue(body.contains("name=\"" + dispositionHeaderName));
             assertTrue(body.contains("filename=\"fileName"));
         } finally {
             client.close();

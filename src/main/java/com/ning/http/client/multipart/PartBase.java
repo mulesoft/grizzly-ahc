@@ -13,9 +13,9 @@
 package com.ning.http.client.multipart;
 
 import static com.ning.http.util.MiscUtils.isNonEmpty;
+import static java.lang.Boolean.getBoolean;
 import static java.nio.charset.StandardCharsets.US_ASCII;
-
-import com.ning.http.client.Param;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
 import java.io.IOException;
 import java.io.OutputStream;
@@ -23,7 +23,13 @@ import java.nio.charset.Charset;
 import java.util.ArrayList;
 import java.util.List;
 
+import com.ning.http.client.Param;
+
 public abstract class PartBase implements Part {
+    
+    public static final String GRIZZLY_ALLOW_UTF8 = "grizzly.allowUtf8";
+
+    private static final Boolean allowUtf8Headers = getBoolean(GRIZZLY_ALLOW_UTF8);
 
     /**
      * The name of the form field, part of the Content-Disposition header
@@ -89,11 +95,11 @@ public abstract class PartBase implements Part {
     protected void visitDispositionHeader(PartVisitor visitor) throws IOException {
         visitor.withBytes(CRLF_BYTES);
         visitor.withBytes(CONTENT_DISPOSITION_BYTES);
-        visitor.withBytes(getDispositionType() != null ? getDispositionType().getBytes(US_ASCII) : FORM_DATA_DISPOSITION_TYPE_BYTES);
+        visitor.withBytes(getDispositionType() != null ? getDispositionType().getBytes(getHeadersCharset()) : FORM_DATA_DISPOSITION_TYPE_BYTES);
         if (getName() != null) {
             visitor.withBytes(NAME_BYTES);
             visitor.withByte(QUOTE_BYTE);
-            visitor.withBytes(getName().getBytes(US_ASCII));
+            visitor.withBytes(getName().getBytes(getHeadersCharset()));
             visitor.withByte(QUOTE_BYTE);
         }
     }
@@ -103,11 +109,11 @@ public abstract class PartBase implements Part {
         if (contentType != null) {
             visitor.withBytes(CRLF_BYTES);
             visitor.withBytes(CONTENT_TYPE_BYTES);
-            visitor.withBytes(contentType.getBytes(US_ASCII));
+            visitor.withBytes(contentType.getBytes(getHeadersCharset()));
             Charset charset = getCharset();
             if (charset != null) {
                 visitor.withBytes(CHARSET_BYTES);
-                visitor.withBytes(charset.name().getBytes(US_ASCII));
+                visitor.withBytes(charset.name().getBytes(getHeadersCharset()));
             }
         }
     }
@@ -117,7 +123,7 @@ public abstract class PartBase implements Part {
         if (transferEncoding != null) {
             visitor.withBytes(CRLF_BYTES);
             visitor.withBytes(CONTENT_TRANSFER_ENCODING_BYTES);
-            visitor.withBytes(transferEncoding.getBytes(US_ASCII));
+            visitor.withBytes(transferEncoding.getBytes(getHeadersCharset()));
         }
     }
 
@@ -134,8 +140,8 @@ public abstract class PartBase implements Part {
         if (isNonEmpty(customHeaders)) {
             for (Param param: customHeaders) {
                 visitor.withBytes(CRLF_BYTES);
-                visitor.withBytes(param.getName().getBytes(US_ASCII));
-                visitor.withBytes(param.getValue().getBytes(US_ASCII));
+                visitor.withBytes(param.getName().getBytes(getHeadersCharset()));
+                visitor.withBytes(param.getValue().getBytes(getHeadersCharset()));
             }
         }
     }
@@ -263,5 +269,13 @@ public abstract class PartBase implements Part {
 
     public void setCustomHeaders(List<Param> customHeaders) {
         this.customHeaders = customHeaders;
+    }
+    
+    private Charset getHeadersCharset() {
+        if (allowUtf8Headers) {
+            return UTF_8;
+        } else {
+            return US_ASCII;
+        }
     }
 }
