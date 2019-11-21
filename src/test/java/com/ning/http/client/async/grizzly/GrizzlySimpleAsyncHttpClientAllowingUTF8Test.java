@@ -13,21 +13,40 @@
 
 package com.ning.http.client.async.grizzly;
 
-import static com.ning.http.client.multipart.PartBase.GRIZZLY_ALLOW_UTF8;
+import static java.nio.charset.StandardCharsets.US_ASCII;
+import static java.nio.charset.StandardCharsets.UTF_8;
 
-import org.testng.annotations.BeforeClass;
+import java.lang.reflect.Field;
+import java.nio.charset.Charset;
+import java.nio.charset.StandardCharsets;
+
+import org.testng.annotations.AfterTest;
+import org.testng.annotations.BeforeTest;
 
 import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.AsyncHttpClientConfig;
 import com.ning.http.client.async.ProviderUtil;
 import com.ning.http.client.async.SimpleAsyncHttpClientTest;
+import com.ning.http.client.multipart.PartBase;
 import com.ning.http.client.providers.grizzly.GrizzlyAsyncHttpProvider;
 
 public class GrizzlySimpleAsyncHttpClientAllowingUTF8Test extends SimpleAsyncHttpClientTest {
 
-    @BeforeClass
-    public void beforeClass() {
-      System.setProperty(GRIZZLY_ALLOW_UTF8, "true");
+    @BeforeTest
+    public void before() throws Exception {
+        setHeadersCharSet(UTF_8);
+    }
+    
+    @AfterTest
+    public void after() throws Exception {
+      setHeadersCharSet(US_ASCII);
+    }
+
+    private void setHeadersCharSet(Charset charset) throws NoSuchFieldException, IllegalAccessException
+    {
+        Field headersCharset = PartBase.class.getDeclaredField("HEADERS_CHARSET");
+          headersCharset.setAccessible(true);
+          headersCharset.set(null, charset);
     }
     
     @Override

@@ -27,7 +27,7 @@ import com.ning.http.client.Param;
 
 public abstract class PartBase implements Part {
     
-    public static final String GRIZZLY_ALLOW_UTF8 = "grizzly.request.part.headers.allowUtf8";
+    public static final String AHC_ALLOW_UTF8 = "ahc.request.part.headers.allowUtf8";
 
     private static Charset HEADERS_CHARSET = getHeadersCharset();
 
@@ -272,7 +272,7 @@ public abstract class PartBase implements Part {
     }
     
     private static Charset getHeadersCharset() {
-        if (getBoolean(GRIZZLY_ALLOW_UTF8)) {
+        if (getBoolean(AHC_ALLOW_UTF8)) {
             return UTF_8;
         } else {
             return US_ASCII;
