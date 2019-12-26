@@ -265,7 +265,7 @@ public abstract class SimpleAsyncHttpClientTest extends AbstractBasicTest {
 
     @Test(groups = { "standalone", "default_provider" })
     public void testMultiPartPut() throws Exception {
-        testMultiPartPutWithCharset(getContentDispositionHeader());
+        testMultiPartPutWithCharset(getContentDispositionHeader(), getFilename());
     }
     
     @Test(groups = { "standalone", "default_provider" })
@@ -277,11 +277,15 @@ public abstract class SimpleAsyncHttpClientTest extends AbstractBasicTest {
         return "baPart";
     }
     
-    private void testMultiPartPutWithCharset(String dispositionHeaderName) throws InterruptedException, ExecutionException, IOException
+    protected String getFilename() {
+      return "fileName";
+  }
+    
+    private void testMultiPartPutWithCharset(String dispositionHeaderName, String filename) throws InterruptedException, ExecutionException, IOException
     {
         SimpleAsyncHttpClient client = new SimpleAsyncHttpClient.Builder().setProviderClass(getProviderClass()).setUrl(getTargetUrl() + "/multipart").build();
         try {
-            Response response = client.put(new ByteArrayPart(dispositionHeaderName, "testMultiPart".getBytes(UTF_8), "application/test", UTF_8, "fileName")).get();
+            Response response = client.put(new ByteArrayPart(dispositionHeaderName, "testMultiPart".getBytes(UTF_8), "application/test", UTF_8, filename)).get();
 
             String body = response.getResponseBody();
             String contentType = response.getHeader("X-Content-Type");
@@ -295,7 +299,7 @@ public abstract class SimpleAsyncHttpClientTest extends AbstractBasicTest {
             assertTrue(body.contains("Content-Disposition:"));
             assertTrue(body.contains("Content-Type: application/test"));
             assertTrue(body.contains("name=\"" + dispositionHeaderName));
-            assertTrue(body.contains("filename=\"fileName"));
+            assertTrue(body.contains("filename=\"" + filename));
         } finally {
             client.close();
         }

@@ -63,4 +63,9 @@ public class GrizzlySimpleAsyncHttpClientAllowingUTF8Test extends SimpleAsyncHtt
         return "bäPart";
     }
     
+    @Override
+    protected String getFilename() {
+      return "filenamë";
+    }
+    
 }
