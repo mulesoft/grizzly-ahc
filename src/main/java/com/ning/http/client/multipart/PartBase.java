@@ -29,7 +29,7 @@ public abstract class PartBase implements Part {
     
     public static final String AHC_ALLOW_UTF8 = "ahc.request.part.headers.allowUtf8";
 
-    private static Charset HEADERS_CHARSET = getHeadersCharset();
+    protected static Charset HEADERS_CHARSET = getHeadersCharset();
 
     /**
      * The name of the form field, part of the Content-Disposition header
