@@ -23,7 +23,6 @@
         </developerConnection>
         <url>https://github.com/javaee/grizzly-ahc</url>
     </scm>
-    
     	<distributionManagement>
 		<downloadUrl>http://www.mulesoft.org/display/MULE/Download</downloadUrl>
 		<repository>
