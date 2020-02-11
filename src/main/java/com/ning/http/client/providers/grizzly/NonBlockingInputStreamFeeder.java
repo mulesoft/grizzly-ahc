@@ -29,8 +29,8 @@ public class NonBlockingInputStreamFeeder extends FeedableBodyGenerator.NonBlock
   private static final int DEFAULT_INTERNAL_BUFFER_SIZE = 8192;
 
   private final InputStream content;
-  private byte[] bytesIn;
   private boolean isDone;
+  private int internalBufferSize;
 
   public NonBlockingInputStreamFeeder(FeedableBodyGenerator feedableBodyGenerator, InputStream content) {
     this(feedableBodyGenerator, content, DEFAULT_INTERNAL_BUFFER_SIZE);
@@ -38,12 +38,13 @@ public class NonBlockingInputStreamFeeder extends FeedableBodyGenerator.NonBlock
 
   public NonBlockingInputStreamFeeder(FeedableBodyGenerator feedableBodyGenerator, InputStream content, int internalBufferSize) {
     super(feedableBodyGenerator);
-    this.bytesIn = new byte[internalBufferSize];
     this.content = content;
+    this.internalBufferSize = internalBufferSize;
   }
 
   @Override
   public void canFeed() throws IOException {
+    byte[] bytesIn = new byte[this.internalBufferSize];
     final int read = content.read(bytesIn);
     if (read == -1) {
       isDone = true;
