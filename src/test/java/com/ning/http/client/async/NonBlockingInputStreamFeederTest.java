@@ -33,15 +33,15 @@ public class NonBlockingInputStreamFeederTest {
 
   @Test
   public void feedSmallPayload() throws IOException {
-    assertPayload(DATA);
+    assertFeeding(DATA);
   }
 
   @Test
   public void feedEmptyPayload() throws IOException {
-    assertPayload(EMPTY);
+    assertFeeding(EMPTY);
   }
 
-  protected void assertPayload(byte[] data) throws IOException {
+  private void assertFeeding(byte[] data) throws IOException {
     // Set the buffer size smaller than the data to be sent to allow the creation of many buffers
     int bufferSize = data.length / 2;
     List<Buffer> buffers = new LinkedList();
@@ -71,7 +71,7 @@ public class NonBlockingInputStreamFeederTest {
     assertEquals(received, data);
   }
 
-  public static byte[] addAll(byte[] one, byte[] two) {
+  private static byte[] addAll(byte[] one, byte[] two) {
     byte[] result = copyOf(one, one.length + two.length);
     arraycopy(two, 0, result, one.length, two.length);
     return result;
