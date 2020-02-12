@@ -121,7 +121,6 @@ public abstract class TransferListenerTest extends AbstractBasicTest {
         });
 
         try (AsyncHttpClient client = getAsyncHttpClient(config)) {
-            client.getConfig().isAllowPoolingConnections();
             Response response = client.prepareGet(getTargetUrl()).execute(tl).get();
 
             assertNotNull(response);
