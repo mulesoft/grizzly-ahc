@@ -16,7 +16,9 @@ import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 
+import com.ning.http.client.AsyncHttpClientConfig;
 import org.eclipse.jetty.server.handler.AbstractHandler;
+import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
 import com.ning.http.client.AsyncHttpClient;
@@ -41,6 +43,8 @@ import java.util.concurrent.atomic.AtomicReference;
 
 public abstract class TransferListenerTest extends AbstractBasicTest {
     private static final File TMP = new File(System.getProperty("java.io.tmpdir"), "ahc-tests-" + UUID.randomUUID().toString().substring(0, 8));
+
+    private AsyncHttpClientConfig config;
 
     private class BasicHandler extends AbstractHandler {
 
@@ -67,6 +71,13 @@ public abstract class TransferListenerTest extends AbstractBasicTest {
             httpResponse.getOutputStream().flush();
             httpResponse.getOutputStream().close();
         }
+    }
+
+    @BeforeMethod
+    public void setup() {
+        this.config = new AsyncHttpClientConfig.Builder()
+                .setAllowPoolingConnections(false)
+                .build();
     }
 
     @Override
@@ -109,7 +120,8 @@ public abstract class TransferListenerTest extends AbstractBasicTest {
             }
         });
 
-        try (AsyncHttpClient client = getAsyncHttpClient(null)) {
+        try (AsyncHttpClient client = getAsyncHttpClient(config)) {
+            client.getConfig().isAllowPoolingConnections();
             Response response = client.prepareGet(getTargetUrl()).execute(tl).get();
 
             assertNotNull(response);
@@ -164,7 +176,7 @@ public abstract class TransferListenerTest extends AbstractBasicTest {
             }
         });
 
-        try (AsyncHttpClient client = getAsyncHttpClient(null)) {
+        try (AsyncHttpClient client = getAsyncHttpClient(config)) {
             Response response = client.preparePut(getTargetUrl()).setBody(largeFile).execute(tl).get();
 
             assertNotNull(response);
@@ -219,7 +231,7 @@ public abstract class TransferListenerTest extends AbstractBasicTest {
             }
         });
 
-        try (AsyncHttpClient client = getAsyncHttpClient(null)) {
+        try (AsyncHttpClient client = getAsyncHttpClient(config)) {
             Response response = client.preparePut(getTargetUrl()).setBody(new FileBodyGenerator(largeFile)).execute(tl).get();
 
             assertNotNull(response);
