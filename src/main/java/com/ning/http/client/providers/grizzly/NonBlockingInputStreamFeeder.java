@@ -28,7 +28,7 @@ public class NonBlockingInputStreamFeeder extends FeedableBodyGenerator.NonBlock
 
   private static final int DEFAULT_INTERNAL_BUFFER_SIZE = 8192;
 
-  private final InputStream content;
+  protected final InputStream content;
   private boolean isDone;
   private int internalBufferSize;
 
