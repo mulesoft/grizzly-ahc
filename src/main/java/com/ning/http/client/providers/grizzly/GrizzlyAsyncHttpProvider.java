@@ -75,7 +75,7 @@ public class GrizzlyAsyncHttpProvider implements AsyncHttpProvider {
     private final GrizzlyAsyncHttpProviderConfig providerConfig;
     private final ConnectionManager connectionManager;
 
-    DelayedExecutor.Resolver<Connection> resolver;
+    DelayedExecutor.Resolver<IdleTimeoutFilter.IdleTimeoutContext> resolver;
     private DelayedExecutor timeoutExecutor;
 
     
@@ -362,7 +362,7 @@ public class GrizzlyAsyncHttpProvider implements AsyncHttpProvider {
         
         if (timeOut > 0) {
             if (resolver != null) {
-                resolver.setTimeoutMillis(c,
+                resolver.setTimeoutMillis(new IdleTimeoutFilter.IdleTimeoutContext(c),
                         System.currentTimeMillis() + timeOut);
             }
         }
