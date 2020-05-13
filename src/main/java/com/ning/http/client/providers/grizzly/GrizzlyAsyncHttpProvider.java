@@ -363,7 +363,7 @@ public class GrizzlyAsyncHttpProvider implements AsyncHttpProvider {
         if (timeOut > 0) {
             if (resolver != null) {
                 resolver.setTimeoutMillis(new IdleTimeoutFilter.IdleTimeoutContext(c),
-                       System.currentTimeMillis() + timeOut);
+                        System.currentTimeMillis() + timeOut);
             }
         }
     }
