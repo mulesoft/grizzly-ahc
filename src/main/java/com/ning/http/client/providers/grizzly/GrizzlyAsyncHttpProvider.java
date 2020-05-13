@@ -282,7 +282,7 @@ public class GrizzlyAsyncHttpProvider implements AsyncHttpProvider {
                         }
                     });
             fcb.add(timeoutFilter);
-            this.resolver = timeoutFilter.getResolver();
+            resolver = timeoutFilter.getResolver();
         }
 
         final boolean defaultSecState = (clientConfig.getSSLContext() != null);
@@ -359,7 +359,7 @@ public class GrizzlyAsyncHttpProvider implements AsyncHttpProvider {
                 ? request.getRequestTimeout()
                 : clientConfig.getRequestTimeout();
         
-
+        
         if (timeOut > 0) {
             if (resolver != null) {
                 resolver.setTimeoutMillis(new IdleTimeoutFilter.IdleTimeoutContext(c),
