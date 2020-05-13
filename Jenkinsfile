@@ -1,3 +1,4 @@
-Map pipelineParams = [ "devBranchesRegex" : "1_14-mule" ]
+Map pipelineParams = [ "devBranchesRegex" : "1_14-mule",
+                       "projectType" : "Runtime" ]
 
-runtimeProjectsBuild(pipelineParams)
+runtimeBuild(pipelineParams)
