@@ -40,9 +40,13 @@ public class Utils {
         
         return true;
     }
-    
+
     public static void setNtlmEstablished(final Connection c) {
-        NTLM_HOLDER.IS_NTLM_DONE.set(c, Boolean.TRUE);
+        setNtlmEstablished(c, Boolean.TRUE);
+    }
+
+    public static void setNtlmEstablished(final Connection c, Boolean isEstablished) {
+        NTLM_HOLDER.IS_NTLM_DONE.set(c, isEstablished);
     }
 
     public static boolean isNtlmEstablished(final Connection c) {

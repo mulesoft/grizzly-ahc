@@ -17,6 +17,7 @@ import static com.ning.http.util.AsyncHttpProviderUtils.getNTLM;
 import static com.ning.http.util.AsyncHttpProviderUtils.isSameHostAndProtocol;
 import static com.ning.http.util.AuthenticatorUtils.getHttpHeaderForAuthScheme;
 import static com.ning.http.util.MiscUtils.isNonEmpty;
+import static java.lang.Boolean.FALSE;
 
 import com.ning.http.client.cookie.Cookie;
 import com.ning.http.client.providers.grizzly.events.GracefulCloseEvent;
@@ -845,6 +846,9 @@ final class AhcEventFilter extends HttpClientFilter {
             String challengeHeader = NTLMEngine.INSTANCE.generateType1Msg();
 
             addNTLMAuthorizationHeader(headers, challengeHeader, proxyInd);
+            // we mark NTLM as not established for the Connection to
+            // support re-negotiation
+            Utils.setNtlmEstablished(c, FALSE);
         } else {
             // probably receiving Type2Msg, so we issue Type3Msg
             addType3NTLMAuthorizationHeader(wwwAuth, headers, realm, proxyInd);

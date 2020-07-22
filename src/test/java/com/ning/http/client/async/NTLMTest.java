@@ -19,6 +19,7 @@ import static org.apache.commons.io.IOUtils.toByteArray;
 import static org.eclipse.jetty.http.HttpMethod.GET;
 import static org.eclipse.jetty.http.HttpMethod.POST;
 import static org.slf4j.LoggerFactory.getLogger;
+import static org.testng.Assert.assertEquals;
 
 import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.AsyncHttpClientConfig;
@@ -52,6 +53,7 @@ public abstract class NTLMTest extends AbstractBasicTest {
 
     private static final Logger LOGGER = getLogger(NTLMTest.class);
     private static final Set<String> seenClients = new HashSet<>();
+    private static final Set<String> authenticatedClients = new HashSet<>();
     private static final String PAYLOAD = "PAYLOAD";
     private AsyncHttpClient client;
 
@@ -63,24 +65,37 @@ public abstract class NTLMTest extends AbstractBasicTest {
 
             // Register seen client INet addresses. This will uniquely identify them
             seenClients.add(request.getRemoteInetSocketAddress().toString());
-            LOGGER.error("Seen address = {}", request.getRemoteInetSocketAddress());
+            LOGGER.error("Seen socket address = {}", request.getRemoteInetSocketAddress());
 
             String authorization = httpRequest.getHeader("Authorization");
-            if (authorization == null) {
+            if (authenticatedClients.contains(request.getRemoteInetSocketAddress().toString())) {
+                // Connection already authenticated, NTLM is connection oriented
+                if (request.getMethod().equals(POST.asString())) {
+                    assertEquals(new String(toByteArray(httpRequest.getInputStream())), PAYLOAD);
+                }
+                httpResponse.setStatus(200);
+            } else if (authorization == null) {
+                // First step:
+                // - No authorization header
+                // - Sends the supported authentication protocols
                 httpResponse.setStatus(401);
                 httpResponse.setHeader("WWW-Authenticate", "NTLM");
-
             } else if (authorization.equals("NTLM TlRMTVNTUAABAAAAAYIIogAAAAAoAAAAAAAAACgAAAAFASgKAAAADw==")) {
+                // Second step:
+                // - Authorization header contains user-password
+                // - Set the challenge
                 httpResponse.setStatus(401);
                 httpResponse.setHeader("WWW-Authenticate", "NTLM TlRMTVNTUAACAAAAAAAAACgAAAABggAAU3J2Tm9uY2UAAAAAAAAAAA==");
-
-            } else if (authorization
-                    .equals("NTLM TlRMTVNTUAADAAAAGAAYAEgAAAAYABgAYAAAABQAFAB4AAAADAAMAIwAAAASABIAmAAAAAAAAACqAAAAAYIAAgUBKAoAAAAPrYfKbe/jRoW5xDxHeoxC1gBmfWiS5+iX4OAN4xBKG/IFPwfH3agtPEia6YnhsADTVQBSAFMAQQAtAE0ASQBOAE8AUgBaAGEAcABoAG8AZABMAGkAZwBoAHQAQwBpAHQAeQA=")) {
+            } else if (authorization.equals("NTLM TlRMTVNTUAADAAAAGAAYAEgAAAAYABgAYAAAABQAFAB4AAAADAAMAIwAAAASABIAmAAAAAAAAACqAAAAAYIAAgUBKAoAAAAPrYfKbe/jRoW5xDxHeoxC1gBmfWiS5+iX4OAN4xBKG/IFPwfH3agtPEia6YnhsADTVQBSAFMAQQAtAE0ASQBOAE8AUgBaAGEAcABoAG8AZABMAGkAZwBoAHQAQwBpAHQAeQA=")) {
+                // Third step:
+                // - Receive the correct response to the challenge
+                authenticatedClients.add(request.getRemoteInetSocketAddress().toString());
                 if (request.getMethod().equals(POST.asString())) {
-                  Assert.assertEquals(new String(toByteArray(httpRequest.getInputStream())), PAYLOAD);
+                  assertEquals(new String(toByteArray(httpRequest.getInputStream())), PAYLOAD);
                 }
                 httpResponse.setStatus(200);
             } else {
+                // Authentication fails, unauthorized
                 httpResponse.setStatus(401);
             }
             httpResponse.setContentLength(0);
@@ -111,7 +126,7 @@ public abstract class NTLMTest extends AbstractBasicTest {
         Request request = new RequestBuilder(GET.asString()).setUrl(getTargetUrl()).build();
         Future<Response> responseFuture = client.executeRequest(request);
         int status = responseFuture.get().getStatusCode();
-        Assert.assertEquals(status, 200);
+        assertEquals(status, 200);
       }
     }
     
@@ -126,7 +141,7 @@ public abstract class NTLMTest extends AbstractBasicTest {
             
             Future<Response> responseFuture = client.executeRequest(request);
             int status = responseFuture.get().getStatusCode();
-            Assert.assertEquals(status, 200);
+            assertEquals(status, 200);
         }
     }
 
@@ -142,6 +157,7 @@ public abstract class NTLMTest extends AbstractBasicTest {
     @BeforeMethod
     public void cleanTestWatchers() {
         seenClients.clear();
+        authenticatedClients.clear();
     }
 
     @Test
@@ -172,15 +188,54 @@ public abstract class NTLMTest extends AbstractBasicTest {
 
         // Make good request
         Future<Response> responseFuture =  makeNtlmAuthenticatedRequestWithCredentials(realmBuilderBase());
-        Assert.assertEquals(responseFuture.get().getStatusCode(), SC_OK);
+        assertEquals(responseFuture.get().getStatusCode(), SC_OK);
 
         // Make bad request
         responseFuture =  makeNtlmAuthenticatedRequestWithCredentials(realmBuilderBase().setPassword("goat"));
-        Assert.assertEquals(responseFuture.get().getStatusCode(), SC_UNAUTHORIZED);
+        assertEquals(responseFuture.get().getStatusCode(), SC_UNAUTHORIZED);
         client.close();
 
         // Since connection management is handled different in NTLM, this will mean that for each
         // credentials set, a new connection will be created and managed from that moment on.
-        Assert.assertEquals(seenClients.size(), 2);
+        assertEquals(seenClients.size(), 2);
+    }
+
+    @Test
+    public void renegotiateNTLMCredentials() throws Exception {
+        // Build client to be used
+        AsyncHttpClientConfig config = new AsyncHttpClientConfig.Builder().build();
+        client = getAsyncHttpClient(config);
+
+        // Make good request
+        Future<Response> responseFuture =  makeNtlmAuthenticatedRequestWithCredentials(realmBuilderBase());
+        assertEquals(responseFuture.get().getStatusCode(), SC_OK);
+
+        // Second request using same connection is also ok
+        responseFuture =  makeNtlmAuthenticatedRequestWithCredentials(realmBuilderBase());
+        assertEquals(responseFuture.get().getStatusCode(), SC_OK);
+
+        // Make bad request
+        responseFuture =  makeNtlmAuthenticatedRequestWithCredentials(realmBuilderBase().setPassword("goat"));
+        assertEquals(responseFuture.get().getStatusCode(), SC_UNAUTHORIZED);
+
+        // twice
+        responseFuture =  makeNtlmAuthenticatedRequestWithCredentials(realmBuilderBase().setPassword("goat"));
+        assertEquals(responseFuture.get().getStatusCode(), SC_UNAUTHORIZED);
+
+        // New good request is ok
+        responseFuture =  makeNtlmAuthenticatedRequestWithCredentials(realmBuilderBase());
+        assertEquals(responseFuture.get().getStatusCode(), SC_OK);
+
+        // Re-authenticate!
+        authenticatedClients.clear();
+        responseFuture =  makeNtlmAuthenticatedRequestWithCredentials(realmBuilderBase());
+        assertEquals(responseFuture.get().getStatusCode(), SC_OK);
+
+        client.close();
+
+        // Since connection management is handled different in NTLM, this will mean that for each
+        // credentials set, a new connection will be created and managed from that moment on.
+        assertEquals(seenClients.size(), 2);
+        assertEquals(authenticatedClients.size(), 1);
     }
 }
