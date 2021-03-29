@@ -19,8 +19,10 @@ import com.ning.http.client.Response;
 import com.ning.http.client.async.AbstractBasicTest;
 import com.ning.http.client.async.ProviderUtil;
 
+import java.util.Map;
 import java.util.concurrent.Future;
 
+import org.slf4j.MDC;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
@@ -46,6 +48,7 @@ public class GrizzlyAsyncHttpProviderTest extends AbstractBasicTest {
       ClassLoader currentClassLoader = currentThread().getContextClassLoader();
       ClassLoader mockClassLoader = mock(ClassLoader.class);
       currentThread().setContextClassLoader(mockClassLoader);
+      // The executeRequest method is called using the mockClassLoader.
       Future<String> responseFuture = client.executeRequest(request, asyncCompletionHandler);
       currentThread().setContextClassLoader(currentClassLoader);
 
@@ -53,6 +56,35 @@ public class GrizzlyAsyncHttpProviderTest extends AbstractBasicTest {
       GrizzlyResponseFuture grizzlyResponseFuture = (GrizzlyResponseFuture) responseFuture;
       HttpTransactionContext transactionContext = grizzlyResponseFuture.getHttpTransactionCtx();
       assertEquals(transactionContext.getConnection().getAttributes().getAttribute("classLoader"), mockClassLoader);
+    }
+  }
+
+  @Test(groups = { "standalone", "default_provider", "async" })
+  public void asyncProviderPreservesEntriesInTheMDC() throws Throwable {
+    try (AsyncHttpClient client = getAsyncHttpClient(null)) {
+      Request request = new RequestBuilder("GET").setUrl(getTargetUrl() + "?q=+%20x").build();
+      AsyncCompletionHandler<String> asyncCompletionHandler = new AsyncCompletionHandler<String>() {
+        @Override
+        public String onCompleted(Response response) throws Exception {
+          return response.getUri().toString();
+        }
+
+        @Override
+        public void onThrowable(Throwable t) {
+          t.printStackTrace();
+          Assert.fail("Unexpected exception: " + t.getMessage(), t);
+        }
+      };
+
+      MDC.put("theKey", "theValue");
+      Future<String> responseFuture = client.executeRequest(request, asyncCompletionHandler);
+      MDC.remove("theKey");
+
+      responseFuture.get();
+      GrizzlyResponseFuture grizzlyResponseFuture = (GrizzlyResponseFuture) responseFuture;
+      HttpTransactionContext transactionContext = grizzlyResponseFuture.getHttpTransactionCtx();
+      Map<String, String> mdc = (Map<String, String>) transactionContext.getConnection().getAttributes().getAttribute("mdc");
+      assertEquals(mdc.get("theKey"), "theValue");
     }
   }
 
