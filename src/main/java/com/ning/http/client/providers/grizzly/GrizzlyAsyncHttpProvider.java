@@ -48,6 +48,8 @@ import com.ning.http.client.AsyncHttpProvider;
 import com.ning.http.client.ListenableFuture;
 import com.ning.http.client.Request;
 import com.ning.http.client.SSLEngineFactory;
+import com.ning.http.util.PreservingThreadContextCompletionHandler;
+
 import javax.net.ssl.SSLContext;
 
 import java.io.IOException;
@@ -127,7 +129,7 @@ public class GrizzlyAsyncHttpProvider implements AsyncHttpProvider {
                 new GrizzlyResponseFuture<T>(asyncHandler);
         
         final CompletionHandler<Connection> connectHandler =
-                new CompletionHandler<Connection>() {
+                new PreservingThreadContextCompletionHandler<>(new CompletionHandler<Connection>() {
             @Override
             public void cancelled() {
                 future.cancel(true);
@@ -168,7 +170,7 @@ public class GrizzlyAsyncHttpProvider implements AsyncHttpProvider {
             public void updated(final Connection c) {
                 // no-op
             }
-        };
+        });
 
         try {
             connectionManager.openAsync(request, connectHandler);

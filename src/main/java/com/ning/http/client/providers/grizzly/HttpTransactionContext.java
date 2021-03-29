@@ -12,6 +12,9 @@
  */
 package com.ning.http.client.providers.grizzly;
 
+import static java.lang.Thread.currentThread;
+import static org.slf4j.MDC.getCopyOfContextMap;
+
 import com.ning.http.client.providers.grizzly.events.GracefulCloseEvent;
 import com.ning.http.client.AsyncHandler;
 import com.ning.http.client.ProxyServer;
@@ -35,6 +38,7 @@ import org.glassfish.grizzly.http.HttpHeader;
 import org.glassfish.grizzly.http.HttpResponsePacket;
 import org.glassfish.grizzly.websockets.HandShake;
 import org.glassfish.grizzly.websockets.ProtocolHandler;
+import org.slf4j.MDC;
 
 /**
  *
@@ -163,6 +167,8 @@ public final class HttpTransactionContext {
         redirectsAllowed = provider.getClientConfig().isFollowRedirect();
         maxRedirectCount = provider.getClientConfig().getMaxRedirects();
         this.requestUri = ahcRequest.getUri();
+        this.connection.getAttributes().setAttribute("mdc", getCopyOfContextMap());
+        this.connection.getAttributes().setAttribute("classLoader", currentThread().getContextClassLoader());
     }
 
     Connection getConnection() {

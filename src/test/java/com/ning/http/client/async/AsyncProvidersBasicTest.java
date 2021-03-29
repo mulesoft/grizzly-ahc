@@ -100,6 +100,28 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
     }
 
     @Test(groups = { "standalone", "default_provider", "async" })
+    public void asyncProviderPreservesClassLoader() throws Throwable {
+        try (AsyncHttpClient client = getAsyncHttpClient(null)) {
+            Request request = new RequestBuilder("GET").setUrl(getTargetUrl() + "?q=+%20x").build();
+
+            Future<String> responseFuture = client.executeRequest(request, new AsyncCompletionHandler<String>() {
+                @Override
+                public String onCompleted(Response response) throws Exception {
+                    return response.getUri().toString();
+                }
+
+                @Override
+                public void onThrowable(Throwable t) {
+                    t.printStackTrace();
+                    Assert.fail("Unexpected exception: " + t.getMessage(), t);
+                }
+
+            });
+            String url = responseFuture.get();
+        }
+    }
+
+    @Test(groups = { "standalone", "default_provider", "async" })
     public void asyncProviderEncodingTest2() throws Throwable {
         try (AsyncHttpClient client = getAsyncHttpClient(null)) {
             Request request = new RequestBuilder("GET").setUrl(getTargetUrl() + "").addQueryParam("q", "a b").build();
