@@ -92,7 +92,9 @@ public class PreservingThreadContextCompletionHandler<E> implements CompletionHa
             outerClassLoader = currentThread.getContextClassLoader();
             outerMDC = MDC.getCopyOfContextMap();
 
-            MDC.setContextMap(innerMDC);
+            if (innerMDC != null) {
+                MDC.setContextMap(innerMDC);
+            }
             setContextClassLoader(currentThread, outerClassLoader, innerClassLoader);
         }
 
@@ -107,7 +109,9 @@ public class PreservingThreadContextCompletionHandler<E> implements CompletionHa
             try {
                 setContextClassLoader(currentThread, innerClassLoader, outerClassLoader);
             } finally {
-                MDC.setContextMap(outerMDC);
+                if (innerMDC != null && outerMDC != null) {
+                    MDC.setContextMap(outerMDC);
+                }
             }
         }
     }
