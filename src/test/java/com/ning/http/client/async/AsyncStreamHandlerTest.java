@@ -407,7 +407,8 @@ public abstract class AsyncStreamHandlerTest extends AbstractBasicTest {
         }
     }
 
-    @Test(groups = { "online", "default_provider" })
+    // TODO: MULE-19322.
+    // @Test(groups = { "online", "default_provider" })
     public void asyncOptionsTest() throws Exception {
         final AtomicReference<FluentCaseInsensitiveStringsMap> responseHeaders = new AtomicReference<>();
 
