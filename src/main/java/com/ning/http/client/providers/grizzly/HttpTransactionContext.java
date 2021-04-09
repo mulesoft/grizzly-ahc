@@ -48,6 +48,9 @@ public final class HttpTransactionContext {
     private static final Attribute<HttpTransactionContext> REQUEST_STATE_ATTR =
             Grizzly.DEFAULT_ATTRIBUTE_BUILDER.createAttribute(HttpTransactionContext.class.getName());
 
+    public static final String MDC_ATTRIBUTE_KEY = "mdc";
+    public static final String CLASS_LOADER_ATTRIBUTE_KEY = "classLoader";
+
     int redirectCount;
     final int maxRedirectCount;
     final boolean redirectsAllowed;
@@ -167,8 +170,8 @@ public final class HttpTransactionContext {
         redirectsAllowed = provider.getClientConfig().isFollowRedirect();
         maxRedirectCount = provider.getClientConfig().getMaxRedirects();
         this.requestUri = ahcRequest.getUri();
-        this.connection.getAttributes().setAttribute("mdc", getCopyOfContextMap());
-        this.connection.getAttributes().setAttribute("classLoader", currentThread().getContextClassLoader());
+        this.connection.getAttributes().setAttribute(MDC_ATTRIBUTE_KEY, getCopyOfContextMap());
+        this.connection.getAttributes().setAttribute(CLASS_LOADER_ATTRIBUTE_KEY, currentThread().getContextClassLoader());
     }
 
     Connection getConnection() {

@@ -21,6 +21,11 @@ import java.util.Map;
 import org.glassfish.grizzly.CompletionHandler;
 import org.slf4j.MDC;
 
+/**
+ * Completion handler wrapper that preserves the construction class loader and MDC on its methods executions.
+ *
+ * @param <E> see {@link CompletionHandler}
+ */
 public class PreservingThreadContextCompletionHandler<E> implements CompletionHandler<E> {
 
     private final CompletionHandler<E> delegate;
