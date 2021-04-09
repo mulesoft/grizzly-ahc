@@ -17,22 +17,15 @@ package com.ning.http.client.async;
 
 import static com.ning.http.util.DateUtils.millisTime;
 import static com.ning.http.util.MiscUtils.isNonEmpty;
+import static java.lang.Long.MIN_VALUE;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
+import static java.util.concurrent.TimeUnit.SECONDS;
+import static org.glassfish.grizzly.http.util.HttpStatus.OK_200;
 import static org.testng.Assert.assertEquals;
 import static org.testng.Assert.assertNotNull;
 import static org.testng.Assert.assertNull;
 import static org.testng.Assert.assertTrue;
 import static org.testng.Assert.fail;
-import static java.util.concurrent.TimeUnit.SECONDS;
-import static java.lang.Long.MIN_VALUE;
-import static org.glassfish.grizzly.http.util.HttpStatus.OK_200;
-import static org.glassfish.grizzly.http.util.HttpStatus.INTERNAL_SERVER_ERROR_500;
-
-import com.ning.http.client.providers.grizzly.GrizzlyResponseStatus;
-import org.glassfish.grizzly.http.HttpRequestPacket;
-import org.glassfish.grizzly.http.HttpResponsePacket;
-import org.testng.Assert;
-import org.testng.annotations.Test;
 
 import com.ning.http.client.AsyncCompletionHandler;
 import com.ning.http.client.AsyncHttpClient;
@@ -49,8 +42,6 @@ import com.ning.http.client.Response;
 import com.ning.http.client.cookie.Cookie;
 import com.ning.http.client.multipart.Part;
 import com.ning.http.client.multipart.StringPart;
-
-import javax.net.ssl.SSLException;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
@@ -71,6 +62,11 @@ import java.util.concurrent.TimeoutException;
 import java.util.concurrent.atomic.AtomicBoolean;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.concurrent.atomic.AtomicReference;
+
+import javax.net.ssl.SSLException;
+
+import org.testng.Assert;
+import org.testng.annotations.Test;
 
 public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
     private static final String TEXT_HTML_UTF_8 = "text/html;charset=utf-8";

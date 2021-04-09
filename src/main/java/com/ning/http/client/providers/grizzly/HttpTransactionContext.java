@@ -12,6 +12,9 @@
  */
 package com.ning.http.client.providers.grizzly;
 
+import static java.lang.Thread.currentThread;
+import static org.slf4j.MDC.getCopyOfContextMap;
+
 import com.ning.http.client.providers.grizzly.events.GracefulCloseEvent;
 import com.ning.http.client.AsyncHandler;
 import com.ning.http.client.ProxyServer;
@@ -35,6 +38,7 @@ import org.glassfish.grizzly.http.HttpHeader;
 import org.glassfish.grizzly.http.HttpResponsePacket;
 import org.glassfish.grizzly.websockets.HandShake;
 import org.glassfish.grizzly.websockets.ProtocolHandler;
+import org.slf4j.MDC;
 
 /**
  *
@@ -43,6 +47,9 @@ import org.glassfish.grizzly.websockets.ProtocolHandler;
 public final class HttpTransactionContext {
     private static final Attribute<HttpTransactionContext> REQUEST_STATE_ATTR =
             Grizzly.DEFAULT_ATTRIBUTE_BUILDER.createAttribute(HttpTransactionContext.class.getName());
+
+    public static final String MDC_ATTRIBUTE_KEY = "mdc";
+    public static final String CLASS_LOADER_ATTRIBUTE_KEY = "classLoader";
 
     int redirectCount;
     final int maxRedirectCount;
@@ -163,6 +170,8 @@ public final class HttpTransactionContext {
         redirectsAllowed = provider.getClientConfig().isFollowRedirect();
         maxRedirectCount = provider.getClientConfig().getMaxRedirects();
         this.requestUri = ahcRequest.getUri();
+        this.connection.getAttributes().setAttribute(MDC_ATTRIBUTE_KEY, getCopyOfContextMap());
+        this.connection.getAttributes().setAttribute(CLASS_LOADER_ATTRIBUTE_KEY, currentThread().getContextClassLoader());
     }
 
     Connection getConnection() {
