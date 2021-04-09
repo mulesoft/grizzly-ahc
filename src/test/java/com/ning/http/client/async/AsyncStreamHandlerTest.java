@@ -407,14 +407,13 @@ public abstract class AsyncStreamHandlerTest extends AbstractBasicTest {
         }
     }
 
-    // TODO: MULE-19322.
-    // @Test(groups = { "online", "default_provider" })
+    @Test(groups = { "online", "default_provider" })
     public void asyncOptionsTest() throws Exception {
         final AtomicReference<FluentCaseInsensitiveStringsMap> responseHeaders = new AtomicReference<>();
 
         try (AsyncHttpClient client = getAsyncHttpClient(null)) {
-            final String[] expected = { "GET", "HEAD", "OPTIONS", "POST" };
-            Future<String> f = client.prepareOptions("http://www.apache.org/").execute(new AsyncHandlerAdapter() {
+            final String[] expected = { "GET", "HEAD", "OPTIONS", "POST", "TRACE" };
+            Future<String> f = client.prepareOptions(getTargetUrl()).execute(new AsyncHandlerAdapter() {
 
                 @Override
                 public STATE onHeadersReceived(HttpResponseHeaders content) throws Exception {
