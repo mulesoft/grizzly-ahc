@@ -54,6 +54,10 @@ import org.glassfish.grizzly.websockets.Version;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
+import static java.lang.Integer.valueOf;
+import static java.lang.String.format;
+import static java.lang.System.getProperty;
+
 /**
  * Grizzly higher level async HTTP client filter, that works as a bridge between
  * AHC and Grizzly HTTP APIs.
@@ -76,6 +80,10 @@ final class AsyncHttpClientFilter extends BaseFilter {
     private static final HeaderValue CLOSE_VALUE = HeaderValue.newHeaderValue("close");
 
     private final AsyncHttpClientConfig config;
+
+    // TODO: Move to /http/api/server/HttpServerProperties.java class defined in the Runtime
+    private static final String MAX_REQUEST_HEADERS_KEY = "mule.http.MAX_REQUEST_HEADERS";
+    private static final int DEFAULT_MAX_REQUEST_HEADERS = 100;
 
     // -------------------------------------------------------- Constructors
     AsyncHttpClientFilter(final GrizzlyAsyncHttpProvider provider) {
@@ -110,7 +118,7 @@ final class AsyncHttpClientFilter extends BaseFilter {
 
     private boolean sendAsGrizzlyRequest(final HttpTransactionContext httpTxCtx,
             final FilterChainContext ctx) throws IOException {
-        
+
         final Connection connection = ctx.getConnection();
         
         final boolean isUsedConnection = Boolean.TRUE.equals(USED_CONNECTION.get(connection));
@@ -141,7 +149,8 @@ final class AsyncHttpClientFilter extends BaseFilter {
         }        
         final HttpRequestPacket.Builder builder = HttpRequestPacket.builder()
                 .protocol(Protocol.HTTP_1_1)
-                .method(method);
+                .method(method)
+                .maxNumHeaders(500);
 
         if (useProxy && !((secure || httpTxCtx.isWSRequest) &&
                 config.isUseRelativeURIsWithConnectProxies())) {
@@ -178,10 +187,10 @@ final class AsyncHttpClientFilter extends BaseFilter {
         } else {
             requestPacket = builder.build();
         }
-        
+        requestPacket.getHeaders().setMaxNumHeaders(getMaximumRequestHeaders());
         requestPacket.setSecure(secure);
         setupKeepAlive(requestPacket, connection);
-        
+
         copyHeaders(ahcRequest, requestPacket);
         addCookies(ahcRequest, requestPacket);
         addHostHeaderIfNeeded(ahcRequest, uri, requestPacket);
@@ -502,4 +511,16 @@ final class AsyncHttpClientFilter extends BaseFilter {
         request.getProcessingState().setKeepAlive(
                 ConnectionManager.isKeepAlive(connection));
     }
+
+    private int getMaximumRequestHeaders() {
+        try {
+            return valueOf(getProperty(MAX_REQUEST_HEADERS_KEY, String.valueOf(DEFAULT_MAX_REQUEST_HEADERS)));
+        } catch (NumberFormatException e) {
+            throw new RuntimeException((format("Invalid value %s for %s configuration",
+                    getProperty(MAX_REQUEST_HEADERS_KEY),
+                    DEFAULT_MAX_REQUEST_HEADERS)),
+                    e);
+        }
+    }
+
 } // END AsyncHttpClientFiler
