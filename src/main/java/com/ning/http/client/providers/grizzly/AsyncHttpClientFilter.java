@@ -57,6 +57,10 @@ import org.slf4j.LoggerFactory;
 import static java.lang.Integer.getInteger;
 import static org.glassfish.grizzly.http.util.MimeHeaders.MAX_NUM_HEADERS_DEFAULT;
 
+import static java.lang.Integer.valueOf;
+import static java.lang.String.format;
+import static java.lang.System.getProperty;
+
 /**
  * Grizzly higher level async HTTP client filter, that works as a bridge between
  * AHC and Grizzly HTTP APIs.
