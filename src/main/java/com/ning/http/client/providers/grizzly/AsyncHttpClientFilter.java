@@ -149,8 +149,7 @@ final class AsyncHttpClientFilter extends BaseFilter {
         }        
         final HttpRequestPacket.Builder builder = HttpRequestPacket.builder()
                 .protocol(Protocol.HTTP_1_1)
-                .method(method)
-                .maxNumHeaders(500);
+                .method(method);
 
         if (useProxy && !((secure || httpTxCtx.isWSRequest) &&
                 config.isUseRelativeURIsWithConnectProxies())) {
