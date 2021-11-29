@@ -65,11 +65,13 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import javax.net.ssl.SSLException;
 
+import com.ning.http.client.providers.grizzly.GrizzlyAsyncHttpProvider;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
 public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
     private static final String TEXT_HTML_UTF_8 = "text/html;charset=utf-8";
+
 
     @Test(groups = { "standalone", "default_provider", "async" })
     public void asyncProviderEncodingTest() throws Throwable {
@@ -115,6 +117,42 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
             });
             String url = responseFuture.get();
             Assert.assertEquals(url, getTargetUrl() + "?q=a%20b");
+        }
+    }
+
+    @Test(groups = { "standalone", "default_provider", "async" }, expectedExceptions = ExecutionException.class)
+    public void asyncProviderMaxRequestHeadersTest() throws Throwable {
+        String maxRequestHeadersProperty = "mule.http.MAX_REQUEST_HEADERS";
+        System.setProperty(maxRequestHeadersProperty, "2");
+        GrizzlyAsyncHttpProvider.refreshAsyncHttpClientFilterSystemProperties();
+
+        try (AsyncHttpClient client = getAsyncHttpClient(null)) {
+            Request request = new RequestBuilder("GET").setUrl(getTargetUrl() + "").addQueryParam("q", "a b")
+                .addHeader("header1", "someValue")
+                .addHeader("header2", "someValue")
+                .addHeader("header3", "someValue")
+                .build();
+
+            Future<String> responseFuture = client.executeRequest(request, new AsyncCompletionHandler<String>() {
+                @Override
+                public String onCompleted(Response response) throws Exception {
+                    return response.getUri().toString();
+                }
+
+                @Override
+                public void onThrowable(Throwable t) {
+                    t.printStackTrace();
+                    Assert.fail("Unexpected exception: " + t.getMessage(), t);
+                }
+
+            });
+            responseFuture.get();
+        } catch (ExecutionException e){
+            assertTrue(e.getMessage().contains("MaxHeaderCountExceededException"));
+            throw e;
+        } finally {
+            System.clearProperty(maxRequestHeadersProperty);
+            GrizzlyAsyncHttpProvider.refreshAsyncHttpClientFilterSystemProperties();
         }
     }
 

@@ -54,9 +54,8 @@ import org.glassfish.grizzly.websockets.Version;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
-import static java.lang.Integer.valueOf;
-import static java.lang.String.format;
-import static java.lang.System.getProperty;
+import static java.lang.Integer.getInteger;
+import static org.glassfish.grizzly.http.util.MimeHeaders.MAX_NUM_HEADERS_DEFAULT;
 
 /**
  * Grizzly higher level async HTTP client filter, that works as a bridge between
@@ -81,9 +80,9 @@ final class AsyncHttpClientFilter extends BaseFilter {
 
     private final AsyncHttpClientConfig config;
 
-    // TODO: Move to /http/api/server/HttpServerProperties.java class defined in the Runtime
     private static final String MAX_REQUEST_HEADERS_KEY = "mule.http.MAX_REQUEST_HEADERS";
-    private static final int DEFAULT_MAX_REQUEST_HEADERS = 100;
+    private static int MAX_REQUEST_HEADERS =
+        getInteger(MAX_REQUEST_HEADERS_KEY, MAX_NUM_HEADERS_DEFAULT);
 
     // -------------------------------------------------------- Constructors
     AsyncHttpClientFilter(final GrizzlyAsyncHttpProvider provider) {
@@ -186,7 +185,7 @@ final class AsyncHttpClientFilter extends BaseFilter {
         } else {
             requestPacket = builder.build();
         }
-        requestPacket.getHeaders().setMaxNumHeaders(getMaximumRequestHeaders());
+        requestPacket.getHeaders().setMaxNumHeaders(MAX_REQUEST_HEADERS);
         requestPacket.setSecure(secure);
         setupKeepAlive(requestPacket, connection);
 
@@ -511,15 +510,7 @@ final class AsyncHttpClientFilter extends BaseFilter {
                 ConnectionManager.isKeepAlive(connection));
     }
 
-    private int getMaximumRequestHeaders() {
-        try {
-            return valueOf(getProperty(MAX_REQUEST_HEADERS_KEY, String.valueOf(DEFAULT_MAX_REQUEST_HEADERS)));
-        } catch (NumberFormatException e) {
-            throw new RuntimeException((format("Invalid value %s for %s configuration",
-                    getProperty(MAX_REQUEST_HEADERS_KEY),
-                    DEFAULT_MAX_REQUEST_HEADERS)),
-                    e);
-        }
+    public static void refreshSystemProperties() {
+        MAX_REQUEST_HEADERS = getInteger(MAX_REQUEST_HEADERS_KEY, MAX_NUM_HEADERS_DEFAULT);
     }
-
 } // END AsyncHttpClientFiler

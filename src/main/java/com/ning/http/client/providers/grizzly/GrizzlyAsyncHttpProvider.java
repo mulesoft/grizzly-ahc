@@ -37,7 +37,6 @@ import org.glassfish.grizzly.strategies.WorkerThreadIOStrategy;
 import org.glassfish.grizzly.threadpool.ThreadPoolConfig;
 import org.glassfish.grizzly.utils.DelayedExecutor;
 import org.glassfish.grizzly.utils.IdleTimeoutFilter;
-import org.glassfish.grizzly.websockets.WebSocketFilter;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 
@@ -485,6 +484,10 @@ public class GrizzlyAsyncHttpProvider implements AsyncHttpProvider {
             }
             LOGGER.debug("COMPLETE: " + (System.currentTimeMillis() - start) + "ms");
         }
+
+    public static void refreshAsyncHttpClientFilterSystemProperties() {
+        AsyncHttpClientFilter.refreshSystemProperties();
+    }
 }
 
 
