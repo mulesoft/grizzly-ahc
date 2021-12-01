@@ -67,6 +67,7 @@ public class AsyncHttpClientConfigBean extends AsyncHttpClientConfig {
         acceptAnyCertificate = defaultAcceptAnyCertificate();
         sslSessionCacheSize = defaultSslSessionCacheSize();
         sslSessionTimeout = defaultSslSessionTimeout();
+        maxRequestHeaders = defaultMaxRequestHeaders();
 
         if (defaultUseProxySelector()) {
             proxyServerSelector = ProxyUtils.getJdkDefaultProxyServerSelector();
@@ -235,6 +236,11 @@ public class AsyncHttpClientConfigBean extends AsyncHttpClientConfig {
 
     public AsyncHttpClientConfigBean setSslSessionTimeout(Integer sslSessionTimeout) {
         this.sslSessionTimeout = sslSessionTimeout;
+        return this;
+    }
+
+    public AsyncHttpClientConfigBean setMaxRequestHeaders(int maxRequestHeaders) {
+        this.maxRequestHeaders = maxRequestHeaders;
         return this;
     }
 }

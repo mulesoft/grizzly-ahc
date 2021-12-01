@@ -484,10 +484,6 @@ public class GrizzlyAsyncHttpProvider implements AsyncHttpProvider {
             }
             LOGGER.debug("COMPLETE: " + (System.currentTimeMillis() - start) + "ms");
         }
-
-    public static void refreshAsyncHttpClientFilterSystemProperties() {
-        AsyncHttpClientFilter.refreshSystemProperties();
-    }
 }
 
 

@@ -65,13 +65,11 @@ import java.util.concurrent.atomic.AtomicReference;
 
 import javax.net.ssl.SSLException;
 
-import com.ning.http.client.providers.grizzly.GrizzlyAsyncHttpProvider;
 import org.testng.Assert;
 import org.testng.annotations.Test;
 
 public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
     private static final String TEXT_HTML_UTF_8 = "text/html;charset=utf-8";
-
 
     @Test(groups = { "standalone", "default_provider", "async" })
     public void asyncProviderEncodingTest() throws Throwable {
@@ -122,11 +120,11 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
 
     @Test(groups = { "standalone", "default_provider", "async" }, expectedExceptions = ExecutionException.class)
     public void asyncProviderMaxRequestHeadersTest() throws Throwable {
-        String maxRequestHeadersProperty = "mule.http.MAX_REQUEST_HEADERS";
-        System.setProperty(maxRequestHeadersProperty, "2");
-        GrizzlyAsyncHttpProvider.refreshAsyncHttpClientFilterSystemProperties();
+        AsyncHttpClientConfig.Builder builder = new AsyncHttpClientConfig.Builder();
+        builder.setMaxRequestHeaders(2);
+        AsyncHttpClientConfig asyncHttpClientConfig = builder.build();
 
-        try (AsyncHttpClient client = getAsyncHttpClient(null)) {
+        try (AsyncHttpClient client = getAsyncHttpClient(asyncHttpClientConfig)) {
             Request request = new RequestBuilder("GET").setUrl(getTargetUrl() + "").addQueryParam("q", "a b")
                 .addHeader("header1", "someValue")
                 .addHeader("header2", "someValue")
@@ -147,12 +145,9 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
 
             });
             responseFuture.get();
-        } catch (ExecutionException e){
+        } catch (ExecutionException e) {
             assertTrue(e.getMessage().contains("MaxHeaderCountExceededException"));
             throw e;
-        } finally {
-            System.clearProperty(maxRequestHeadersProperty);
-            GrizzlyAsyncHttpProvider.refreshAsyncHttpClientFilterSystemProperties();
         }
     }
 
