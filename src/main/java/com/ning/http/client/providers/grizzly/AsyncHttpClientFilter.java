@@ -178,7 +178,7 @@ final class AsyncHttpClientFilter extends BaseFilter {
         } else {
             requestPacket = builder.build();
         }
-        
+        requestPacket.getHeaders().setMaxNumHeaders(config.getMaxRequestHeaders());
         requestPacket.setSecure(secure);
         setupKeepAlive(requestPacket, connection);
         

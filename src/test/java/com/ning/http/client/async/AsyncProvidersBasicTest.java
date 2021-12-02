@@ -118,6 +118,39 @@ public abstract class AsyncProvidersBasicTest extends AbstractBasicTest {
         }
     }
 
+    @Test(groups = { "standalone", "default_provider", "async" }, expectedExceptions = ExecutionException.class)
+    public void asyncProviderMaxRequestHeadersTest() throws Throwable {
+        AsyncHttpClientConfig.Builder builder = new AsyncHttpClientConfig.Builder();
+        builder.setMaxRequestHeaders(2);
+        AsyncHttpClientConfig asyncHttpClientConfig = builder.build();
+
+        try (AsyncHttpClient client = getAsyncHttpClient(asyncHttpClientConfig)) {
+            Request request = new RequestBuilder("GET").setUrl(getTargetUrl() + "").addQueryParam("q", "a b")
+                .addHeader("header1", "someValue")
+                .addHeader("header2", "someValue")
+                .addHeader("header3", "someValue")
+                .build();
+
+            Future<String> responseFuture = client.executeRequest(request, new AsyncCompletionHandler<String>() {
+                @Override
+                public String onCompleted(Response response) throws Exception {
+                    return response.getUri().toString();
+                }
+
+                @Override
+                public void onThrowable(Throwable t) {
+                    t.printStackTrace();
+                    Assert.fail("Unexpected exception: " + t.getMessage(), t);
+                }
+
+            });
+            responseFuture.get();
+        } catch (ExecutionException e) {
+            assertTrue(e.getMessage().contains("MaxHeaderCountExceededException"));
+            throw e;
+        }
+    }
+
     @Test(groups = { "standalone", "default_provider", "async" })
     public void emptyRequestURI() throws Throwable {
         try (AsyncHttpClient client = getAsyncHttpClient(null)) {

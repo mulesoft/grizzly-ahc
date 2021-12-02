@@ -83,6 +83,8 @@ public class AsyncHttpClientConfig {
     protected Integer sslSessionTimeout;
     protected AsyncHttpProviderConfig<?, ?> providerConfig;
 
+    protected int maxRequestHeaders;
+
     protected AsyncHttpClientConfig() {
     }
 
@@ -118,7 +120,8 @@ public class AsyncHttpClientConfig {
             String[] enabledCipherSuites,//
             Integer sslSessionCacheSize,//
             Integer sslSessionTimeout,//
-            AsyncHttpProviderConfig<?, ?> providerConfig) {
+            AsyncHttpProviderConfig<?, ?> providerConfig,//
+            int maxRequestHeaders) {
 
         this.connectTimeout = connectTimeout;
         this.maxConnections = maxConnections;
@@ -153,6 +156,7 @@ public class AsyncHttpClientConfig {
         this.sslSessionCacheSize = sslSessionCacheSize;
         this.sslSessionTimeout = sslSessionTimeout;
         this.providerConfig = providerConfig;
+        this.maxRequestHeaders = maxRequestHeaders;
     }
 
     /**
@@ -479,6 +483,13 @@ public class AsyncHttpClientConfig {
     }
 
     /**
+     * since 1.14-MULE-021
+     */
+    public int getMaxRequestHeaders() {
+        return maxRequestHeaders;
+    }
+
+    /**
      * Builder for an {@link AsyncHttpClient}
      */
     public static class Builder {
@@ -517,6 +528,7 @@ public class AsyncHttpClientConfig {
         private Integer sslSessionCacheSize = defaultSslSessionCacheSize();
         private Integer sslSessionTimeout = defaultSslSessionTimeout();
         private AsyncHttpProviderConfig<?, ?> providerConfig;
+        private int maxRequestHeaders = defaultMaxRequestHeaders();
 
         public Builder() {
         }
@@ -938,6 +950,11 @@ public class AsyncHttpClientConfig {
             return this;
         }
 
+        public Builder setMaxRequestHeaders(int maxRequestHeaders) {
+            this.maxRequestHeaders = maxRequestHeaders;
+            return this;
+        }
+
         /**
          * Create a config builder with values taken from the given prototype configuration.
          *
@@ -981,6 +998,7 @@ public class AsyncHttpClientConfig {
             sslSessionCacheSize = prototype.sslSessionCacheSize;
             sslSessionTimeout = prototype.sslSessionTimeout;
             acceptAnyCertificate = prototype.acceptAnyCertificate;
+            maxRequestHeaders = prototype.maxRequestHeaders;
         }
 
         /**
@@ -1043,7 +1061,8 @@ public class AsyncHttpClientConfig {
                     enabledCipherSuites, //
                     sslSessionCacheSize, //
                     sslSessionTimeout, //
-                    providerConfig);
+                    providerConfig, //
+                    maxRequestHeaders);
         }
     }
 }

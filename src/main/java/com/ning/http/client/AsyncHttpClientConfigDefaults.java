@@ -13,6 +13,7 @@
 package com.ning.http.client;
 
 import static com.ning.http.util.MiscUtils.getBoolean;
+import static org.glassfish.grizzly.http.util.MimeHeaders.MAX_NUM_HEADERS_DEFAULT;
 
 public final class AsyncHttpClientConfigDefaults {
 
@@ -119,5 +120,9 @@ public final class AsyncHttpClientConfigDefaults {
 
     public static String[] defaultEnabledProtocols() {
         return new String[] { "TLSv1.2", "TLSv1.1", "TLSv1" };
+    }
+
+    public static int defaultMaxRequestHeaders() {
+        return MAX_NUM_HEADERS_DEFAULT;
     }
 }
