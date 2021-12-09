@@ -71,6 +71,7 @@ public abstract class RequestBuilderBase<T extends RequestBuilderBase<T>> {
         private ConnectionPoolPartitioning connectionPoolPartitioning = ConnectionPoolPartitioning.PerHostConnectionPoolPartitioning.INSTANCE;
         private NameResolver nameResolver = NameResolver.JdkNameResolver.INSTANCE;
         private List<Param> queryParams;
+        private boolean isRedirect = false;
 
         public RequestImpl() {
         }
@@ -101,6 +102,7 @@ public abstract class RequestBuilderBase<T extends RequestBuilderBase<T>> {
                 this.charset = prototype.getBodyEncoding();
                 this.connectionPoolPartitioning = prototype.getConnectionPoolPartitioning();
                 this.nameResolver = prototype.getNameResolver();
+                this.isRedirect = prototype.isRedirect();
             }
         }
 
@@ -228,7 +230,12 @@ public abstract class RequestBuilderBase<T extends RequestBuilderBase<T>> {
         public NameResolver getNameResolver() {
             return nameResolver;
         }
-        
+
+        @Override
+        public boolean isRedirect() {
+            return isRedirect;
+        }
+
         @Override
         public List<Param> getQueryParams() {
             if (queryParams == null)
@@ -382,6 +389,10 @@ public abstract class RequestBuilderBase<T extends RequestBuilderBase<T>> {
             }
         }
         request.cookies = filteredCookies;
+    }
+
+    public void setAsRedirectRequest() {
+        request.isRedirect = true;
     }
 
     public T addOrReplaceCookie(Cookie cookie) {

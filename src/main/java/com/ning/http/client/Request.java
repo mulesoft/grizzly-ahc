@@ -192,4 +192,6 @@ public interface Request {
     ConnectionPoolPartitioning getConnectionPoolPartitioning();
 
     NameResolver getNameResolver();
+
+    boolean isRedirect();
 }

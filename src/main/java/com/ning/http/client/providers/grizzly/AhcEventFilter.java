@@ -822,6 +822,8 @@ final class AhcEventFilter extends HttpClientFilter {
             builder.addOrReplaceCookie(CookieDecoder.decode(cookieStr));
         }
 
+        builder.setAsRedirectRequest();
+
         return builder.build();
     }
     

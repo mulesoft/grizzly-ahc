@@ -186,13 +186,22 @@ class ConnectionManager {
         Connection c = pool.poll(endpoint);
 
         if (c == null) {
-            final Future<Connection> future =
+            final Future<Connection> future;
+            if (request.isRedirect()) {
+                future =
+                    defaultConnectionHandler.connectAsyncForRedirect(
+                            new InetSocketAddress(host, port),
+                            request.getLocalAddress() != null
+                                    ? new InetSocketAddress(request.getLocalAddress(), 0)
+                                    : null, null, true, true);
+            } else {
+                future =
                     defaultConnectionHandler.connect(
-                    new InetSocketAddress(host, port),
-                    request.getLocalAddress() != null
-                            ? new InetSocketAddress(request.getLocalAddress(), 0)
-                            : null);
-
+                            new InetSocketAddress(host, port),
+                            request.getLocalAddress() != null
+                                    ? new InetSocketAddress(request.getLocalAddress(), 0)
+                                    : null);
+            }
             final int cTimeout = config.getConnectTimeout();
             try {
                 c = cTimeout > 0
