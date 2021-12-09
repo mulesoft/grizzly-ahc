@@ -31,7 +31,6 @@ import org.glassfish.grizzly.http.util.Header;
 import org.glassfish.grizzly.nio.RoundRobinConnectionDistributor;
 import org.glassfish.grizzly.nio.transport.TCPNIOTransport;
 import org.glassfish.grizzly.nio.transport.TCPNIOTransportBuilder;
-import org.glassfish.grizzly.nio.transport.TCPNIOTransportBuilderForRedirect;
 import org.glassfish.grizzly.ssl.SSLEngineConfigurator;
 import org.glassfish.grizzly.strategies.SameThreadIOStrategy;
 import org.glassfish.grizzly.strategies.WorkerThreadIOStrategy;
@@ -92,7 +91,7 @@ public class GrizzlyAsyncHttpProvider implements AsyncHttpProvider {
                 clientConfig.getAsyncHttpProviderConfig() instanceof GrizzlyAsyncHttpProviderConfig ?
                 (GrizzlyAsyncHttpProviderConfig) clientConfig.getAsyncHttpProviderConfig()
                 : new GrizzlyAsyncHttpProviderConfig();
-        final TCPNIOTransportBuilderForRedirect builder = TCPNIOTransportBuilderForRedirect.newInstance();
+        final TCPNIOTransportBuilder builder = TCPNIOTransportBuilder.newInstance();
         clientTransport = builder.build();
         initializeTransport(clientConfig);
         connectionManager = new ConnectionManager(this, clientTransport, providerConfig);
