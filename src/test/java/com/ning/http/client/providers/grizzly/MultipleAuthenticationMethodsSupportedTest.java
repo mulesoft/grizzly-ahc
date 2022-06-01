@@ -145,7 +145,7 @@ public class MultipleAuthenticationMethodsSupportedTest extends AbstractBasicTes
     @Test(groups = { "standalone", "default_provider" })
     public void EventFilterGetsFirstHttpAuthHeaderWithoutSetSchemeForAuthorization() throws ExecutionException, TimeoutException, InterruptedException {
         try (AsyncHttpClient client = getAsyncHttpClient(null)) {
-            AsyncHttpClient.BoundRequestBuilder r = client.prepareGet("http://127.0.0.1:" + port1 + "/").setRealm((new Realm.RealmBuilder()).setPrincipal(user).setPassword(admin).setRealmName(TEST_REALM).build());
+            AsyncHttpClient.BoundRequestBuilder r = client.prepareGet("http://127.0.0.1:" + port1 + "/").setRealm((new Realm.RealmBuilder()).setScheme(Realm.AuthScheme.BASIC).setPrincipal(user).setPassword(admin).setRealmName(TEST_REALM).build());
 
             Future<Response> f = r.execute();
             Response resp = f.get(60, SECONDS);

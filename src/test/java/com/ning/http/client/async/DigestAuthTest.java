@@ -113,7 +113,7 @@ public abstract class DigestAuthTest extends AbstractBasicTest {
     @Test(groups = { "standalone", "default_provider" })
     public void digestAuthTest() throws IOException, ExecutionException, TimeoutException, InterruptedException {
         try (AsyncHttpClient client = getAsyncHttpClient(null)) {
-            AsyncHttpClient.BoundRequestBuilder r = client.prepareGet("http://127.0.0.1:" + port1 + "/").setRealm((new Realm.RealmBuilder()).setPrincipal(user).setPassword(admin).setRealmName("MyRealm").setScheme(Realm.AuthScheme.DIGEST).build());
+            AsyncHttpClient.BoundRequestBuilder r = client.prepareGet("http://127.0.0.1:" + port1 + "/").setRealm((new Realm.RealmBuilder()).setScheme(Realm.AuthScheme.DIGEST).setPrincipal(user).setPassword(admin).setRealmName("MyRealm").setScheme(Realm.AuthScheme.DIGEST).build());
 
             Future<Response> f = r.execute();
             Response resp = f.get(60, TimeUnit.SECONDS);
@@ -126,7 +126,7 @@ public abstract class DigestAuthTest extends AbstractBasicTest {
     @Test(groups = { "standalone", "default_provider" })
     public void digestAuthTestWithoutScheme() throws IOException, ExecutionException, TimeoutException, InterruptedException {
         try (AsyncHttpClient client = getAsyncHttpClient(null)) {
-            AsyncHttpClient.BoundRequestBuilder r = client.prepareGet("http://127.0.0.1:" + port1 + "/").setRealm((new Realm.RealmBuilder()).setPrincipal(user).setPassword(admin).setRealmName("MyRealm").build());
+            AsyncHttpClient.BoundRequestBuilder r = client.prepareGet("http://127.0.0.1:" + port1 + "/").setRealm((new Realm.RealmBuilder()).setScheme(Realm.AuthScheme.DIGEST).setPrincipal(user).setPassword(admin).setRealmName("MyRealm").build());
 
             Future<Response> f = r.execute();
             Response resp = f.get(60, TimeUnit.SECONDS);
@@ -139,7 +139,7 @@ public abstract class DigestAuthTest extends AbstractBasicTest {
     @Test(groups = { "standalone", "default_provider" })
     public void digestAuthNegativeTest() throws IOException, ExecutionException, TimeoutException, InterruptedException {
         try (AsyncHttpClient client = getAsyncHttpClient(null)) {
-            AsyncHttpClient.BoundRequestBuilder r = client.prepareGet("http://127.0.0.1:" + port1 + "/").setRealm((new Realm.RealmBuilder()).setPrincipal("fake").setPassword(admin).setScheme(Realm.AuthScheme.DIGEST).build());
+            AsyncHttpClient.BoundRequestBuilder r = client.prepareGet("http://127.0.0.1:" + port1 + "/").setRealm((new Realm.RealmBuilder()).setScheme(Realm.AuthScheme.DIGEST).setPrincipal("fake").setPassword(admin).setScheme(Realm.AuthScheme.DIGEST).build());
 
             Future<Response> f = r.execute();
             Response resp = f.get(20, TimeUnit.SECONDS);
