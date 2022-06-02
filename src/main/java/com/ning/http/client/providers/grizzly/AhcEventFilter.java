@@ -867,21 +867,19 @@ final class AhcEventFilter extends HttpClientFilter {
             final String wwwAuth, final Request request,
             final ProxyServer proxyServer)
             throws NTLMEngineException {
+        
+        final FluentCaseInsensitiveStringsMap headers = request.getHeaders();
+        headers.remove(Header.ProxyAuthorization.toString());
 
         Realm realm = proxyServer.realmBuilder()//
                 .setScheme(AuthScheme.NTLM)//
                 .setUri(request.getUri())//
                 .setMethodName(request.getMethod()).build();
-
-        final FluentCaseInsensitiveStringsMap headers = request.getHeaders();
-        if (wwwAuth.equals("NTLM")) {
-            String challengeHeader = NTLMEngine.INSTANCE.generateType1Msg();
-            addNTLMAuthorizationHeader(headers, challengeHeader, true);
-            Utils.setNtlmEstablished(c);
-        } else {
-            addType3NTLMAuthorizationHeader(wwwAuth, headers, realm, true);
-            Utils.setNtlmEstablished(c);
-        }
+        
+        addType3NTLMAuthorizationHeader(wwwAuth, headers, realm, true);
+        // we mark NTLM as established for the Connection to
+        // avoid preemptive NTLM
+        Utils.setNtlmEstablished(c);
 
         return realm;
     }

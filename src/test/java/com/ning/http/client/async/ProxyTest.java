@@ -17,7 +17,10 @@ package com.ning.http.client.async;
 
 import static org.testng.Assert.*;
 
-import com.ning.http.client.*;
+import com.ning.http.client.AsyncHttpClient;
+import com.ning.http.client.AsyncHttpClientConfig;
+import com.ning.http.client.ProxyServer;
+import com.ning.http.client.Response;
 
 import java.io.IOException;
 import java.net.*;
@@ -36,7 +39,6 @@ import javax.servlet.http.HttpServletResponse;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.eclipse.jetty.server.handler.HandlerWrapper;
-import org.testng.Assert;
 import org.testng.annotations.Test;
 
 /**
@@ -100,37 +102,13 @@ public abstract class ProxyTest extends AbstractBasicTest {
         }
     }
 
-    @Test(groups = "fast")
-    public void testBasics() {
-        ProxyServer proxyServer;
-        com.ning.http.client.Request req;
-
-        // should avoid, it's in non-proxy hosts
-        req = new RequestBuilder("GET").setUrl("http://somewhere.com/foo").build();
-        proxyServer = new ProxyServer("foo", 1234).addNonProxyHost("somewhere.com");
-        Assert.assertTrue(proxyServer.isIgnoredForHost(req.getUri().getHost()));
-
-        // should avoid, it's in non-proxy hosts (with "*")
-        req = new RequestBuilder("GET").setUrl("http://sub.somewhere.com/foo").build();
-        proxyServer = new ProxyServer("foo", 1234).addNonProxyHost("*.somewhere.com");
-        Assert.assertTrue(proxyServer.isIgnoredForHost(req.getUri().getHost()));
-
-        // should use it
-        req = new RequestBuilder("GET").setUrl("http://sub.somewhere.com/foo").build();
-        proxyServer = new ProxyServer("foo", 1234).addNonProxyHost("*.somewhere.org");
-        Assert.assertFalse(proxyServer.isIgnoredForHost(req.getUri().getHost()));
-    }
-
     @Test(groups = { "standalone", "default_provider" })
-    public void testNonProxyHostsRequestOverridesConfig() throws IOException, ExecutionException, TimeoutException, InterruptedException {
-        ProxyServer configProxy = new ProxyServer("127.0.0.1", port1 - 1);
-        ProxyServer requestProxy = new ProxyServer("127.0.0.1", port1).addNonProxyHost("127.0.0.1");
-
-        AsyncHttpClientConfig cfg = new AsyncHttpClientConfig.Builder().setProxyServer(configProxy).build();
+    public void testNonProxyHosts() throws IOException, ExecutionException, TimeoutException, InterruptedException {
+        AsyncHttpClientConfig cfg = new AsyncHttpClientConfig.Builder().setProxyServer(new ProxyServer("127.0.0.1", port1 - 1)).build();
         try (AsyncHttpClient client = getAsyncHttpClient(cfg)) {
 
             String target = "http://127.0.0.1:1234/";
-            client.prepareGet(target).setProxyServer(requestProxy).execute().get();
+            client.prepareGet(target).setProxyServer(new ProxyServer("127.0.0.1", port1).addNonProxyHost("127.0.0.1")).execute().get();
             assertFalse(true);
         } catch (Throwable e) {
             assertNotNull(e.getCause());
@@ -139,11 +117,10 @@ public abstract class ProxyTest extends AbstractBasicTest {
     }
 
     @Test(groups = { "standalone", "default_provider" })
-    public void testRequestNonProxyHost() throws IOException, ExecutionException, TimeoutException, InterruptedException {
-        ProxyServer proxy = new ProxyServer("127.0.0.1", port1 - 1).addNonProxyHost("127.0.0.1");
+    public void testNonProxyHostIssue202() throws IOException, ExecutionException, TimeoutException, InterruptedException {
         try (AsyncHttpClient client = getAsyncHttpClient(null)) {
             String target = "http://127.0.0.1:" + port1 + "/";
-            Future<Response> f = client.prepareGet(target).setProxyServer(proxy).execute();
+            Future<Response> f = client.prepareGet(target).setProxyServer(new ProxyServer("127.0.0.1", port1 - 1).addNonProxyHost("127.0.0.1")).execute();
             Response resp = f.get(3, TimeUnit.SECONDS);
             assertNotNull(resp);
             assertEquals(resp.getStatusCode(), HttpServletResponse.SC_OK);

@@ -317,7 +317,8 @@ final class AsyncHttpClientFilter extends BaseFilter {
             }
         }
         
-        final String reqAuth = AuthenticatorUtils.perRequestAuthorizationHeader(realm);
+        final String reqAuth = AuthenticatorUtils.perRequestAuthorizationHeader(
+                req, uri, realm);
         if (reqAuth != null) {
             requestPacket.addHeader(Header.Authorization, reqAuth);
         }
@@ -340,7 +341,8 @@ final class AsyncHttpClientFilter extends BaseFilter {
             final HttpRequestPacket requestPacket, final ProxyServer proxy,
             final Realm realm, final boolean isUsedConnection,
             final boolean isConnect) throws IOException {
-        final String reqAuth = AuthenticatorUtils.perRequestProxyAuthorizationHeader(realm);
+        final String reqAuth = AuthenticatorUtils.perRequestProxyAuthorizationHeader(
+                req, realm, proxy, isConnect);
         
         if (reqAuth != null) {
             requestPacket.setHeader(Header.ProxyAuthorization, reqAuth);
@@ -348,7 +350,9 @@ final class AsyncHttpClientFilter extends BaseFilter {
         }
         
         if (!isUsedConnection) {
-            final String conAuth = AuthenticatorUtils.perConnectionProxyAuthorizationHeader(req, realm);
+            final String conAuth =
+                    AuthenticatorUtils.perConnectionProxyAuthorizationHeader(
+                            req, proxy, isConnect);
             if (conAuth != null) {
                 requestPacket.setHeader(Header.ProxyAuthorization, conAuth);
             }

@@ -25,13 +25,11 @@ import java.io.IOException;
 import java.net.UnknownHostException;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.Future;
-import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.servlet.ServletException;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.eclipse.jetty.http.HttpStatus;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.eclipse.jetty.server.handler.HandlerWrapper;
 import org.testng.Assert;
@@ -41,45 +39,24 @@ public abstract class NTLMProxyTest extends AbstractBasicTest {
 
     public static class NTLMProxyHandler extends HandlerWrapper {
 
-        private AtomicInteger state = new AtomicInteger();
-
         @Override
         public void handle(String pathInContext, org.eclipse.jetty.server.Request request, HttpServletRequest httpRequest,
                 HttpServletResponse httpResponse) throws IOException, ServletException {
 
             String authorization = httpRequest.getHeader("Proxy-Authorization");
-            boolean asExpected = false;
+            if (authorization == null) {
+                httpResponse.setStatus(407);
+                httpResponse.setHeader("Proxy-Authenticate", "NTLM");
 
-            switch (state.getAndIncrement()) {
-                case 0:
-                    if (authorization == null) {
-                        httpResponse.setStatus(HttpStatus.PROXY_AUTHENTICATION_REQUIRED_407);
-                        httpResponse.setHeader("Proxy-Authenticate", "NTLM");
-                        asExpected = true;
-                    }
-                    break;
+            } else if (authorization.equals("NTLM TlRMTVNTUAABAAAAAYIIogAAAAAoAAAAAAAAACgAAAAFASgKAAAADw==")) {
+                httpResponse.setStatus(407);
+                httpResponse.setHeader("Proxy-Authenticate", "NTLM TlRMTVNTUAACAAAAAAAAACgAAAABggAAU3J2Tm9uY2UAAAAAAAAAAA==");
 
-                case 1:
-                    if (authorization.equals("NTLM TlRMTVNTUAABAAAAAYIIogAAAAAoAAAAAAAAACgAAAAFASgKAAAADw==")) {
-                        httpResponse.setStatus(HttpStatus.PROXY_AUTHENTICATION_REQUIRED_407);
-                        httpResponse.setHeader("Proxy-Authenticate", "NTLM TlRMTVNTUAACAAAAAAAAACgAAAABggAAU3J2Tm9uY2UAAAAAAAAAAA==");
-                        asExpected = true;
-                    }
-                    break;
-
-                case 2:
-                    if (authorization
-                        .equals("NTLM TlRMTVNTUAADAAAAGAAYAEgAAAAYABgAYAAAABQAFAB4AAAADAAMAIwAAAASABIAmAAAAAAAAACqAAAAAYIAAgUBKAoAAAAPrYfKbe/jRoW5xDxHeoxC1gBmfWiS5+iX4OAN4xBKG/IFPwfH3agtPEia6YnhsADTVQBSAFMAQQAtAE0ASQBOAE8AUgBaAGEAcABoAG8AZABMAGkAZwBoAHQAQwBpAHQAeQA=")) {
-                        httpResponse.setStatus(HttpStatus.OK_200);
-                        asExpected = true;
-                    }
-                    break;
-
-                default:
-            }
-
-            if (!asExpected) {
-                httpResponse.setStatus(HttpStatus.FORBIDDEN_403);
+            } else if (authorization
+                    .equals("NTLM TlRMTVNTUAADAAAAGAAYAEgAAAAYABgAYAAAABQAFAB4AAAADAAMAIwAAAASABIAmAAAAAAAAACqAAAAAYIAAgUBKAoAAAAPrYfKbe/jRoW5xDxHeoxC1gBmfWiS5+iX4OAN4xBKG/IFPwfH3agtPEia6YnhsADTVQBSAFMAQQAtAE0ASQBOAE8AUgBaAGEAcABoAG8AZABMAGkAZwBoAHQAQwBpAHQAeQA=")) {
+                httpResponse.setStatus(200);
+            } else {
+                httpResponse.setStatus(401);
             }
             httpResponse.setContentLength(0);
             httpResponse.getOutputStream().flush();
@@ -98,7 +75,7 @@ public abstract class NTLMProxyTest extends AbstractBasicTest {
         AsyncHttpClientConfig config = new AsyncHttpClientConfig.Builder().build();
 
         try (AsyncHttpClient client = getAsyncHttpClient(config)) {
-            Request request = new RequestBuilder("GET").setProxyServer(ntlmProxy()).build();
+            Request request = new RequestBuilder("GET").setProxyServer(ntlmProxy()).setUrl(getTargetUrl()).build();
             Future<Response> responseFuture = client.executeRequest(request);
             int status = responseFuture.get().getStatusCode();
             Assert.assertEquals(status, 200);

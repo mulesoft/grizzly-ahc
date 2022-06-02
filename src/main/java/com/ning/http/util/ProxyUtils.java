@@ -88,7 +88,57 @@ public final class ProxyUtils {
                 proxyServer = selector.select(request.getUri());
             }
         }
-        return proxyServer != null && !proxyServer.isIgnoredForHost(request.getUri().getHost()) ? proxyServer : null;
+        return ProxyUtils.avoidProxy(proxyServer, request) ? null : proxyServer;
+    }
+    
+    /**
+     * @see #avoidProxy(ProxyServer, String)
+     */
+    public static boolean avoidProxy(final ProxyServer proxyServer, final Request request) {
+        return avoidProxy(proxyServer, request.getUri().getHost());
+    }
+
+    private static boolean matchNonProxyHost(String targetHost, String nonProxyHost) {
+
+        if (nonProxyHost.length() > 1) {
+            if (nonProxyHost.charAt(0) == '*')
+                return targetHost.regionMatches(true, targetHost.length() - nonProxyHost.length() + 1, nonProxyHost, 1,
+                        nonProxyHost.length() - 1);
+            else if (nonProxyHost.charAt(nonProxyHost.length() - 1) == '*')
+                return targetHost.regionMatches(true, 0, nonProxyHost, 0, nonProxyHost.length() - 1);
+        }
+
+        return nonProxyHost.equalsIgnoreCase(targetHost);
+    }
+    
+    /**
+     * Checks whether proxy should be used according to nonProxyHosts settings of it, or we want to go directly to
+     * target host. If <code>null</code> proxy is passed in, this method returns true -- since there is NO proxy, we
+     * should avoid to use it. Simple hostname pattern matching using "*" are supported, but only as prefixes.
+     * See http://download.oracle.com/javase/1.4.2/docs/guide/net/properties.html
+     *
+     * @param proxyServer
+     * @param hostname      the hostname
+     * @return true if we have to avoid proxy use (obeying non-proxy hosts settings), false otherwise.
+     */
+    public static boolean avoidProxy(final ProxyServer proxyServer, final String hostname) {
+        if (proxyServer != null) {
+            if (hostname == null)
+                throw new NullPointerException("hostname");
+            
+            List<String> nonProxyHosts = proxyServer.getNonProxyHosts();
+
+            if (nonProxyHosts != null) {
+                for (String nonProxyHost : nonProxyHosts) {
+                    if (matchNonProxyHost(hostname, nonProxyHost))
+                        return true;
+                }
+            }
+
+            return false;
+        } else {
+            return true;
+        }
     }
 
     /**

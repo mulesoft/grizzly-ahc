@@ -16,7 +16,6 @@
  */
 package com.ning.http.client;
 
-import static com.ning.http.util.MiscUtils.isNonEmpty;
 import static java.nio.charset.StandardCharsets.UTF_8;
 
 import com.ning.http.client.Realm.AuthScheme;
@@ -86,6 +85,7 @@ public class ProxyServer {
 
     public Realm.RealmBuilder realmBuilder() {
         return new Realm.RealmBuilder()//
+        .setTargetProxy(true)
         .setNtlmDomain(ntlmDomain)
         .setNtlmHost(ntlmHost)
         .setPrincipal(principal)
@@ -176,42 +176,6 @@ public class ProxyServer {
     @Override
     public String toString() {
         return url;
-    }
-
-    /**
-     * Checks whether proxy should be used according to nonProxyHosts settings of it, or we want to go directly to
-     * target host. If <code>null</code> proxy is passed in, this method returns true -- since there is NO proxy, we
-     * should avoid to use it. Simple hostname pattern matching using "*" are supported, but only as prefixes.
-     *
-     * @param hostname the hostname
-     * @return true if we have to ignore proxy use (obeying non-proxy hosts settings), false otherwise.
-     * @see <a href="https://docs.oracle.com/javase/8/docs/api/java/net/doc-files/net-properties.html">Networking Properties</a>
-     */
-    public boolean isIgnoredForHost(String hostname) {
-        if (hostname == null)
-            throw new NullPointerException("hostname");
-
-        if (isNonEmpty(nonProxyHosts)) {
-            for (String nonProxyHost : nonProxyHosts) {
-                if (matchNonProxyHost(hostname, nonProxyHost))
-                    return true;
-            }
-        }
-
-        return false;
-    }
-
-    private boolean matchNonProxyHost(String targetHost, String nonProxyHost) {
-
-        if (nonProxyHost.length() > 1) {
-            if (nonProxyHost.charAt(0) == '*') {
-                return targetHost.regionMatches(true, targetHost.length() - nonProxyHost.length() + 1, nonProxyHost, 1,
-                    nonProxyHost.length() - 1);
-            } else if (nonProxyHost.charAt(nonProxyHost.length() - 1) == '*')
-                return targetHost.regionMatches(true, 0, nonProxyHost, 0, nonProxyHost.length() - 1);
-        }
-
-        return nonProxyHost.equalsIgnoreCase(targetHost);
     }
 }
 
