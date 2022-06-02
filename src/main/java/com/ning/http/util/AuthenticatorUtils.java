@@ -100,20 +100,25 @@ public final class AuthenticatorUtils {
         
         String proxyAuthorization = null;
 
-        if (connect) {
-            List<String> auth = request.getHeaders().get(PROXY_AUTH_HEADER);
-            String ntlmHeader = getNTLM(auth);
-            if (ntlmHeader != null) {
-                proxyAuthorization = ntlmHeader;
-            } else {
-                String msg = NTLMEngine.INSTANCE.generateType1Msg();
-                proxyAuthorization = "NTLM " + msg;                
-            }
-        } else if (proxyServer != null && proxyServer.getPrincipal() != null && isNonEmpty(proxyServer.getNtlmDomain())) {
-            List<String> auth = request.getHeaders().get(PROXY_AUTH_HEADER);
-            if (getNTLM(auth) == null) {
-                String msg = NTLMEngine.INSTANCE.generateType1Msg();
-                proxyAuthorization = "NTLM " + msg;
+        if (proxyServer != null) {
+            switch (proxyServer.getScheme()) {
+                case BASIC:
+                case DIGEST:
+                case NONE:
+                    break;
+                case NTLM:
+                case KERBEROS:
+                case SPNEGO:
+                    List<String> auth = request.getHeaders().get(PROXY_AUTH_HEADER);
+                    String ntlmHeader = getNTLM(auth);
+                    if (ntlmHeader == null) {
+                        String msg = NTLMEngine.INSTANCE.generateType1Msg();
+                        proxyAuthorization = "NTLM " + msg;
+                    } else {
+                        proxyAuthorization = ntlmHeader;
+                    }
+                    break;
+                default:
             }
         }
 
