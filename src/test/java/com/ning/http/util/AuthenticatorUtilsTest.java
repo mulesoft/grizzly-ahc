@@ -3,6 +3,7 @@ package com.ning.http.util;
 import static com.ning.http.client.async.RetryNonBlockingIssue.findFreePort;
 import static com.ning.http.util.AuthenticatorUtils.perConnectionProxyAuthorizationHeader;
 
+import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
 
 import static org.junit.Assert.assertEquals;
@@ -68,7 +69,9 @@ public class AuthenticatorUtilsTest {
             { TRUE, AuthScheme.KERBEROS, null, null, null, null, null },
             { TRUE, AuthScheme.NONE, null, null, null, null, null },
             { TRUE, AuthScheme.NTLM, NTLM_PRINCIPAL, NTLM_DOMAIN, null, null, NTLM_MSG_TYPE_1 },
+            { FALSE, AuthScheme.NTLM, NTLM_PRINCIPAL, NTLM_DOMAIN, null, null, NTLM_MSG_TYPE_1 },
             { TRUE, AuthScheme.NTLM, NTLM_PRINCIPAL, NTLM_DOMAIN, NTLM_HEADER_KEY, NTLM_HEADER_VALUE, NTLM_HEADER_VALUE},
+            { FALSE, AuthScheme.NTLM, NTLM_PRINCIPAL, NTLM_DOMAIN, NTLM_HEADER_KEY, NTLM_HEADER_VALUE, null},
             { TRUE, AuthScheme.SPNEGO, null, null, null, null, null }
         });
     }
