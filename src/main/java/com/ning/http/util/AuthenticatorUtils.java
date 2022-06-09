@@ -95,27 +95,16 @@ public final class AuthenticatorUtils {
     }
     
     public static String perConnectionProxyAuthorizationHeader(
-            Request request, ProxyServer proxyServer, boolean connect)
+            Request request, ProxyServer proxyServer, boolean connect, boolean properProxyAuthorization)
             throws IOException {
-        
-        String proxyAuthorization = null;
 
-        if (proxyServer != null && proxyServer.getPrincipal() != null && isNonEmpty(proxyServer.getNtlmDomain())) {
-            List<String> auth = request.getHeaders().get(PROXY_AUTH_HEADER);
-            String ntlmHeader = getNTLM(auth);
-            if (ntlmHeader == null) {
-                String msg = NTLMEngine.INSTANCE.generateType1Msg();
-                proxyAuthorization = "NTLM " + msg;
-            } else {
-                if (connect) {
-                    proxyAuthorization = ntlmHeader;
-                }
-            }
+        if (properProxyAuthorization) {
+            return getProxyAuthorizationProperly(request, proxyServer, connect);
+        } else {
+            return getProxyAuthorization(request, proxyServer, connect);
         }
-
-        return proxyAuthorization;
     }
-    
+
     public static String perRequestProxyAuthorizationHeader(Request request,
             Realm realm, ProxyServer proxyServer, boolean connect) {
 
@@ -146,6 +135,44 @@ public final class AuthenticatorUtils {
             }
         }
 
+        return proxyAuthorization;
+    }
+
+    private static String getProxyAuthorization(Request request, ProxyServer proxyServer, boolean connect) {
+        String proxyAuthorization = null;
+        if (connect) {
+            List<String> auth = request.getHeaders().get(PROXY_AUTH_HEADER);
+            String ntlmHeader = getNTLM(auth);
+            if (ntlmHeader != null) {
+                proxyAuthorization = ntlmHeader;
+            } else {
+                String msg = NTLMEngine.INSTANCE.generateType1Msg();
+                proxyAuthorization = "NTLM " + msg;
+            }
+        } else if (proxyServer != null && proxyServer.getPrincipal() != null && isNonEmpty(proxyServer.getNtlmDomain())) {
+            List<String> auth = request.getHeaders().get(PROXY_AUTH_HEADER);
+            if (getNTLM(auth) == null) {
+                String msg = NTLMEngine.INSTANCE.generateType1Msg();
+                proxyAuthorization = "NTLM " + msg;
+            }
+        }
+        return proxyAuthorization;
+    }
+
+    private static String getProxyAuthorizationProperly(Request request, ProxyServer proxyServer, boolean connect) {
+        String proxyAuthorization = null;
+        if (proxyServer != null && proxyServer.getPrincipal() != null && isNonEmpty(proxyServer.getNtlmDomain())) {
+            List<String> auth = request.getHeaders().get(PROXY_AUTH_HEADER);
+            String ntlmHeader = getNTLM(auth);
+            if (ntlmHeader == null) {
+                String msg = NTLMEngine.INSTANCE.generateType1Msg();
+                proxyAuthorization = "NTLM " + msg;
+            } else {
+                if (connect) {
+                    proxyAuthorization = ntlmHeader;
+                }
+            }
+        }
         return proxyAuthorization;
     }
     

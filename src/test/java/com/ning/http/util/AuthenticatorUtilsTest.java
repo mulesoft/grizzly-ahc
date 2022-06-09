@@ -25,15 +25,15 @@ import org.junit.runners.Parameterized;
 public class AuthenticatorUtilsTest {
 
     private final int port;
-    static final private String METHOD = "GET";
-    static final private String URL = "http://127.0.0.1:%d/foo/test";
-    static final private String HOST = "127.0.0.1";
-    static final private String PASSWORD = "Beeblebrox";
-    static final private String NTLM_PRINCIPAL = "Zaphod";
-    static final private String NTLM_DOMAIN = "Ursa-Minor";
-    static final private String NTLM_MSG_TYPE_1 = "NTLM TlRMTVNTUAABAAAAAYIIogAAAAAoAAAAAAAAACgAAAAFASgKAAAADw==";
-    static final private String NTLM_HEADER_KEY = "Proxy-Authorization";
-    static final private String NTLM_HEADER_VALUE =
+    private static final String METHOD = "GET";
+    private static final String URL = "http://127.0.0.1:%d/foo/test";
+    private static final String HOST = "127.0.0.1";
+    private static final String PASSWORD = "Beeblebrox";
+    private static final String NTLM_PRINCIPAL = "Zaphod";
+    private static final String NTLM_DOMAIN = "Ursa-Minor";
+    private static final String NTLM_MSG_TYPE_1 = "NTLM TlRMTVNTUAABAAAAAYIIogAAAAAoAAAAAAAAACgAAAAFASgKAAAADw==";
+    private static final String NTLM_HEADER_KEY = "Proxy-Authorization";
+    private static final String NTLM_HEADER_VALUE =
         "NTLM TlRMTVNTUAADAAAAGAAYAEgAAAAYABgAYAAAABQAFAB4AAAADAAMAIwAAAASABIAmAAAAAAAAACqAAAAAYIAAgUBKAoAAAAPrYfKbe/jRoW5xDxHeoxC1gBmfWiS5+iX4OAN4xBKG/IFPwfH3agtPEia6YnhsADTVQBSAFMAQQAtAE0ASQBOAE8AUgBaAGEAcABoAG8AZABMAGkAZwBoAHQAQwBpAHQAeQA=";
 
     private final boolean connect;
@@ -43,6 +43,7 @@ public class AuthenticatorUtilsTest {
     private final String headerKey;
     private final String headerValue;
     private final String proxyAuthorizationExpected;
+    private final boolean properProxyAuthorization;
 
     public AuthenticatorUtilsTest(boolean connect,
                                   AuthScheme authScheme,
@@ -50,7 +51,8 @@ public class AuthenticatorUtilsTest {
                                   String ntlDomain,
                                   String headerKey,
                                   String headerValue,
-                                  String proxyAuthorization) throws IOException {
+                                  String proxyAuthorization,
+                                  boolean properProxyAuthorization) throws IOException {
         this.port = findFreePort();
         this.connect = connect;
         this.authScheme = authScheme;
@@ -59,20 +61,30 @@ public class AuthenticatorUtilsTest {
         this.headerKey = headerKey;
         this.headerValue = headerValue;
         this.proxyAuthorizationExpected = proxyAuthorization;
+        this.properProxyAuthorization = properProxyAuthorization;
     }
 
     @Parameterized.Parameters
     public static Collection<?> parameters() {
         return Arrays.asList(new Object[][] {
-            { TRUE, AuthScheme.BASIC, null, null, null, null, null },
-            { TRUE, AuthScheme.DIGEST, null, null, null, null, null },
-            { TRUE, AuthScheme.KERBEROS, null, null, null, null, null },
-            { TRUE, AuthScheme.NONE, null, null, null, null, null },
-            { TRUE, AuthScheme.NTLM, NTLM_PRINCIPAL, NTLM_DOMAIN, null, null, NTLM_MSG_TYPE_1 },
-            { FALSE, AuthScheme.NTLM, NTLM_PRINCIPAL, NTLM_DOMAIN, null, null, NTLM_MSG_TYPE_1 },
-            { TRUE, AuthScheme.NTLM, NTLM_PRINCIPAL, NTLM_DOMAIN, NTLM_HEADER_KEY, NTLM_HEADER_VALUE, NTLM_HEADER_VALUE},
-            { FALSE, AuthScheme.NTLM, NTLM_PRINCIPAL, NTLM_DOMAIN, NTLM_HEADER_KEY, NTLM_HEADER_VALUE, null},
-            { TRUE, AuthScheme.SPNEGO, null, null, null, null, null }
+            { TRUE, AuthScheme.BASIC, null, null, null, null, null, TRUE },
+            { TRUE, AuthScheme.BASIC, null, null, null, null, NTLM_MSG_TYPE_1, FALSE },
+            { TRUE, AuthScheme.DIGEST, null, null, null, null, null, TRUE },
+            { TRUE, AuthScheme.DIGEST, null, null, null, null, NTLM_MSG_TYPE_1, FALSE },
+            { TRUE, AuthScheme.KERBEROS, null, null, null, null, null, TRUE },
+            { TRUE, AuthScheme.KERBEROS, null, null, null, null, NTLM_MSG_TYPE_1, FALSE },
+            { TRUE, AuthScheme.NONE, null, null, null, null, null, TRUE },
+            { TRUE, AuthScheme.NONE, null, null, null, null, NTLM_MSG_TYPE_1, FALSE },
+            { TRUE, AuthScheme.NTLM, NTLM_PRINCIPAL, NTLM_DOMAIN, null, null, NTLM_MSG_TYPE_1, TRUE },
+            { FALSE, AuthScheme.NTLM, NTLM_PRINCIPAL, NTLM_DOMAIN, null, null, NTLM_MSG_TYPE_1, TRUE },
+            { TRUE, AuthScheme.NTLM, NTLM_PRINCIPAL, NTLM_DOMAIN, null, null, NTLM_MSG_TYPE_1, FALSE },
+            { FALSE, AuthScheme.NTLM, NTLM_PRINCIPAL, NTLM_DOMAIN, null, null, NTLM_MSG_TYPE_1, FALSE },
+            { TRUE, AuthScheme.NTLM, NTLM_PRINCIPAL, NTLM_DOMAIN, NTLM_HEADER_KEY, NTLM_HEADER_VALUE, NTLM_HEADER_VALUE, TRUE },
+            { FALSE, AuthScheme.NTLM, NTLM_PRINCIPAL, NTLM_DOMAIN, NTLM_HEADER_KEY, NTLM_HEADER_VALUE, null, TRUE },
+            { TRUE, AuthScheme.NTLM, NTLM_PRINCIPAL, NTLM_DOMAIN, NTLM_HEADER_KEY, NTLM_HEADER_VALUE, NTLM_HEADER_VALUE, FALSE },
+            { FALSE, AuthScheme.NTLM, NTLM_PRINCIPAL, NTLM_DOMAIN, NTLM_HEADER_KEY, NTLM_HEADER_VALUE, null, FALSE },
+            { TRUE, AuthScheme.SPNEGO, null, null, null, null, null, TRUE },
+            { TRUE, AuthScheme.SPNEGO, null, null, null, null, NTLM_MSG_TYPE_1, FALSE }
         });
     }
 
@@ -87,7 +99,7 @@ public class AuthenticatorUtilsTest {
             .setHeader(headerKey, headerValue)
             .build();
 
-        String proxyAuthorization = perConnectionProxyAuthorizationHeader(request, proxyServer, connect);
+        String proxyAuthorization = perConnectionProxyAuthorizationHeader(request, proxyServer, connect, properProxyAuthorization);
 
         assertEquals(proxyAuthorization, proxyAuthorizationExpected);
     }
