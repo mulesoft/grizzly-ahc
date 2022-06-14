@@ -1,7 +1,6 @@
 package com.ning.http.util;
 
 import static com.ning.http.client.async.RetryNonBlockingIssue.findFreePort;
-import static com.ning.http.util.AuthenticatorUtils.perConnectionProxyAuthorizationHeader;
 
 import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
@@ -99,7 +98,8 @@ public class AuthenticatorUtilsTest {
             .setHeader(headerKey, headerValue)
             .build();
 
-        String proxyAuthorization = perConnectionProxyAuthorizationHeader(request, proxyServer, connect, properProxyAuthorization);
+        AuthenticatorUtils.setProperProxyAuthorization(properProxyAuthorization);
+        String proxyAuthorization = AuthenticatorUtils.perConnectionProxyAuthorizationHeader(request, proxyServer, connect);
 
         assertEquals(proxyAuthorization, proxyAuthorizationExpected);
     }

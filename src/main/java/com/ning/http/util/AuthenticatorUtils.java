@@ -30,6 +30,7 @@ import com.ning.http.client.uri.Uri;
 
 public final class AuthenticatorUtils {
     private static final String PROXY_AUTH_HEADER = "Proxy-Authorization";
+    private static boolean properProxyAuthorization = true;
     
     public static String perConnectionAuthorizationHeader(Request request,
             Uri uri, ProxyServer proxyServer, Realm realm) throws IOException {
@@ -95,7 +96,7 @@ public final class AuthenticatorUtils {
     }
     
     public static String perConnectionProxyAuthorizationHeader(
-            Request request, ProxyServer proxyServer, boolean connect, boolean properProxyAuthorization)
+            Request request, ProxyServer proxyServer, boolean connect)
             throws IOException {
 
         if (properProxyAuthorization) {
@@ -136,6 +137,10 @@ public final class AuthenticatorUtils {
         }
 
         return proxyAuthorization;
+    }
+
+    public static void setProperProxyAuthorization(boolean proxyAuthorization) {
+        properProxyAuthorization = proxyAuthorization;
     }
 
     private static String getProxyAuthorization(Request request, ProxyServer proxyServer, boolean connect) {
