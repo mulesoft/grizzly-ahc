@@ -84,7 +84,6 @@ public class AsyncHttpClientConfig {
     protected AsyncHttpProviderConfig<?, ?> providerConfig;
 
     protected int maxRequestHeaders;
-    protected boolean properProxyAuthorization;
 
     protected AsyncHttpClientConfig() {
     }
@@ -122,8 +121,7 @@ public class AsyncHttpClientConfig {
             Integer sslSessionCacheSize,//
             Integer sslSessionTimeout,//
             AsyncHttpProviderConfig<?, ?> providerConfig,//
-            int maxRequestHeaders,
-            boolean properProxyAuthorization) {
+            int maxRequestHeaders) {
 
         this.connectTimeout = connectTimeout;
         this.maxConnections = maxConnections;
@@ -159,7 +157,6 @@ public class AsyncHttpClientConfig {
         this.sslSessionTimeout = sslSessionTimeout;
         this.providerConfig = providerConfig;
         this.maxRequestHeaders = maxRequestHeaders;
-        this.properProxyAuthorization = properProxyAuthorization;
     }
 
     /**
@@ -493,13 +490,6 @@ public class AsyncHttpClientConfig {
     }
 
     /**
-     * since 1.14-MULE-022
-     */
-    public boolean getProperProxyAuthorization() {
-        return properProxyAuthorization;
-    }
-
-    /**
      * Builder for an {@link AsyncHttpClient}
      */
     public static class Builder {
@@ -539,7 +529,6 @@ public class AsyncHttpClientConfig {
         private Integer sslSessionTimeout = defaultSslSessionTimeout();
         private AsyncHttpProviderConfig<?, ?> providerConfig;
         private int maxRequestHeaders = defaultMaxRequestHeaders();
-        private boolean properProxyAuthorization = true;
 
         public Builder() {
         }
@@ -966,11 +955,6 @@ public class AsyncHttpClientConfig {
             return this;
         }
 
-        public Builder setProperProxyAuthentication(boolean properProxyAuthorization) {
-            this.properProxyAuthorization = properProxyAuthorization;
-            return this;
-        }
-
         /**
          * Create a config builder with values taken from the given prototype configuration.
          *
@@ -1015,7 +999,6 @@ public class AsyncHttpClientConfig {
             sslSessionTimeout = prototype.sslSessionTimeout;
             acceptAnyCertificate = prototype.acceptAnyCertificate;
             maxRequestHeaders = prototype.maxRequestHeaders;
-            properProxyAuthorization = prototype.properProxyAuthorization;
         }
 
         /**
@@ -1079,8 +1062,7 @@ public class AsyncHttpClientConfig {
                     sslSessionCacheSize, //
                     sslSessionTimeout, //
                     providerConfig, //
-                    maxRequestHeaders,
-                    properProxyAuthorization);
+                    maxRequestHeaders);
         }
     }
 }

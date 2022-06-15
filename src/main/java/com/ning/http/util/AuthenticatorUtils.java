@@ -12,14 +12,13 @@
  */
 package com.ning.http.util;
 
-import static java.nio.charset.StandardCharsets.ISO_8859_1;
 import static com.ning.http.util.AsyncHttpProviderUtils.getNonEmptyPath;
 import static com.ning.http.util.AsyncHttpProviderUtils.getNTLM;
 import static com.ning.http.util.MiscUtils.isNonEmpty;
 
-import java.io.IOException;
-import java.nio.charset.Charset;
-import java.util.List;
+import static java.lang.Boolean.parseBoolean;
+import static java.lang.System.getProperty;
+import static java.nio.charset.StandardCharsets.ISO_8859_1;
 
 import com.ning.http.client.ProxyServer;
 import com.ning.http.client.Realm;
@@ -28,9 +27,14 @@ import com.ning.http.client.ntlm.NTLMEngine;
 import com.ning.http.client.spnego.SpnegoEngine;
 import com.ning.http.client.uri.Uri;
 
+import java.io.IOException;
+import java.nio.charset.Charset;
+import java.util.List;
+
 public final class AuthenticatorUtils {
     private static final String PROXY_AUTH_HEADER = "Proxy-Authorization";
-    private static boolean properProxyAuthorization = true;
+    private static final String AVOID_SENDING_NTLM_HEADER = "mule.http.avoidSendingNTLMHeader";
+    private static boolean avoidSendingNtlmHeader = parseBoolean(getProperty(AVOID_SENDING_NTLM_HEADER, "true"));
     
     public static String perConnectionAuthorizationHeader(Request request,
             Uri uri, ProxyServer proxyServer, Realm realm) throws IOException {
@@ -99,10 +103,10 @@ public final class AuthenticatorUtils {
             Request request, ProxyServer proxyServer, boolean connect)
             throws IOException {
 
-        if (properProxyAuthorization) {
-            return getProxyAuthorizationProperly(request, proxyServer, connect);
-        } else {
+        if (avoidSendingNtlmHeader) {
             return getProxyAuthorization(request, proxyServer, connect);
+        } else {
+            return getNtlmProxyAuthorization(request, proxyServer, connect);
         }
     }
 
@@ -139,11 +143,7 @@ public final class AuthenticatorUtils {
         return proxyAuthorization;
     }
 
-    public static void setProperProxyAuthorization(boolean proxyAuthorization) {
-        properProxyAuthorization = proxyAuthorization;
-    }
-
-    private static String getProxyAuthorization(Request request, ProxyServer proxyServer, boolean connect) {
+    private static String getNtlmProxyAuthorization(Request request, ProxyServer proxyServer, boolean connect) {
         String proxyAuthorization = null;
         if (connect) {
             List<String> auth = request.getHeaders().get(PROXY_AUTH_HEADER);
@@ -164,7 +164,7 @@ public final class AuthenticatorUtils {
         return proxyAuthorization;
     }
 
-    private static String getProxyAuthorizationProperly(Request request, ProxyServer proxyServer, boolean connect) {
+    private static String getProxyAuthorization(Request request, ProxyServer proxyServer, boolean connect) {
         String proxyAuthorization = null;
         if (proxyServer != null && proxyServer.getPrincipal() != null && isNonEmpty(proxyServer.getNtlmDomain())) {
             List<String> auth = request.getHeaders().get(PROXY_AUTH_HEADER);

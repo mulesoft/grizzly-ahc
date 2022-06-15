@@ -12,6 +12,9 @@
  */
 package com.ning.http.client.async;
 
+import static org.testng.Assert.assertEquals;
+import static org.testng.Assert.assertNull;
+
 import com.ning.http.client.AsyncHttpClient;
 import com.ning.http.client.AsyncHttpClientConfig;
 import com.ning.http.client.ProxyServer;
@@ -37,7 +40,6 @@ import org.eclipse.jetty.server.handler.HandlerWrapper;
 import org.eclipse.jetty.util.ssl.SslContextFactory;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.testng.Assert;
 import org.testng.annotations.BeforeClass;
 import org.testng.annotations.Test;
 
@@ -48,7 +50,6 @@ public class BasicProxyAuthorizationTest extends AbstractBasicTest {
     private static final String CONNECTION_HEADER = "X-Connection";
     private static final String KEEP_ALIVE = "keep-alive";
     private static final String PROXY_AUTHORIZATION_HEADER = "Proxy-Authorization";
-    private static final String NTLM_MSG_TYPE_1 = "NTLM TlRMTVNTUAABAAAAAYIIogAAAAAoAAAAAAAAACgAAAAFASgKAAAADw==";
 
     @Override
     public AsyncHttpClient getAsyncHttpClient(AsyncHttpClientConfig config) {
@@ -65,12 +66,8 @@ public class BasicProxyAuthorizationTest extends AbstractBasicTest {
         public void handle(String pathInContext, org.eclipse.jetty.server.Request request, HttpServletRequest httpRequest,
                            HttpServletResponse httpResponse) throws IOException, ServletException {
 
-            String proxyAuthorization = httpRequest.getHeader(PROXY_AUTHORIZATION_HEADER);
-            if (proxyAuthorization == null) {
-                super.handle(pathInContext, request, httpRequest, httpResponse);
-            } else if (proxyAuthorization.equals(NTLM_MSG_TYPE_1)) {
-                log.info("Proxy Authorization MUST be null.");
-            }
+            assertNull(httpRequest.getHeader(PROXY_AUTHORIZATION_HEADER));
+            super.handle(pathInContext, request, httpRequest, httpResponse);
         }
     }
 
@@ -131,38 +128,20 @@ public class BasicProxyAuthorizationTest extends AbstractBasicTest {
         log.info("Local HTTP server started successfully");
     }
 
-    @Test
+    @Test(description = "W-10863931: When the connection is not an NTLM one, the NTLM proxy authorization is not required.")
     public void connectionProxyAuthorizationHeaderProperlySetTest() throws Throwable {
         ProxyServer proxyServer = new ProxyServer(LOCALHOST, port1);
 
         AsyncHttpClientConfig asyncHttpClientConfig = new AsyncHttpClientConfig.Builder()
             .setAcceptAnyCertificate(true)
-            .setProperProxyAuthentication(true)
             .build();
 
         try (AsyncHttpClient client = getAsyncHttpClient(asyncHttpClientConfig)) {
             Request request = client.prepareGet(getTargetUrl2()).setProxyServer(proxyServer).build();
             Response response = client.executeRequest(request).get();
 
-            Assert.assertEquals(response.getStatusCode(), 200);
-            Assert.assertEquals(response.getHeader(CONNECTION_HEADER), KEEP_ALIVE);
-        }
-    }
-
-    @Test
-    public void connectionProxyAuthorizationHeaderNotProperlySetTest() throws Throwable {
-        ProxyServer proxyServer = new ProxyServer(LOCALHOST, port1);
-
-        AsyncHttpClientConfig asyncHttpClientConfig = new AsyncHttpClientConfig.Builder()
-            .setAcceptAnyCertificate(true)
-            .setProperProxyAuthentication(false)
-            .build();
-
-        try (AsyncHttpClient client = getAsyncHttpClient(asyncHttpClientConfig)) {
-            Request request = client.prepareGet(getTargetUrl2()).setProxyServer(proxyServer).build();
-            Response response = client.executeRequest(request).get();
-
-            Assert.assertEquals(response.getStatusCode(), 404);
+            assertEquals(response.getStatusCode(), 200);
+            assertEquals(response.getHeader(CONNECTION_HEADER), KEEP_ALIVE);
         }
     }
 }

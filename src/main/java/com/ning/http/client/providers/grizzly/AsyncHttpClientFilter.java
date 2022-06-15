@@ -350,7 +350,6 @@ final class AsyncHttpClientFilter extends BaseFilter {
         }
         
         if (!isUsedConnection) {
-            AuthenticatorUtils.setProperProxyAuthorization(config.getProperProxyAuthorization());
             final String conAuth =
                     AuthenticatorUtils.perConnectionProxyAuthorizationHeader(
                             req, proxy, isConnect);

@@ -13,6 +13,7 @@
 package com.ning.http.util;
 
 import static com.ning.http.client.async.RetryNonBlockingIssue.findFreePort;
+import static com.ning.http.util.AuthenticatorUtils.perConnectionProxyAuthorizationHeader;
 
 import static java.lang.Boolean.FALSE;
 import static java.lang.Boolean.TRUE;
@@ -49,31 +50,25 @@ public class AuthenticatorUtilsTest {
     @DataProvider(name = "proxyAuthorization")
     public Object[][] createData() {
         return new Object[][] {
-            { TRUE, AuthScheme.BASIC, null, null, null, null, null, TRUE },
-            { TRUE, AuthScheme.BASIC, null, null, null, null, NTLM_MSG_TYPE_1, FALSE },
-            { TRUE, AuthScheme.DIGEST, null, null, null, null, null, TRUE },
-            { TRUE, AuthScheme.DIGEST, null, null, null, null, NTLM_MSG_TYPE_1, FALSE },
-            { TRUE, AuthScheme.KERBEROS, null, null, null, null, null, TRUE },
-            { TRUE, AuthScheme.KERBEROS, null, null, null, null, NTLM_MSG_TYPE_1, FALSE },
-            { TRUE, AuthScheme.NONE, null, null, null, null, null, TRUE },
-            { TRUE, AuthScheme.NONE, null, null, null, null, NTLM_MSG_TYPE_1, FALSE },
-            { TRUE, AuthScheme.NTLM, NTLM_PRINCIPAL, NTLM_DOMAIN, null, null, NTLM_MSG_TYPE_1, TRUE },
-            { FALSE, AuthScheme.NTLM, NTLM_PRINCIPAL, NTLM_DOMAIN, null, null, NTLM_MSG_TYPE_1, TRUE },
-            { TRUE, AuthScheme.NTLM, NTLM_PRINCIPAL, NTLM_DOMAIN, null, null, NTLM_MSG_TYPE_1, FALSE },
-            { FALSE, AuthScheme.NTLM, NTLM_PRINCIPAL, NTLM_DOMAIN, null, null, NTLM_MSG_TYPE_1, FALSE },
-            { TRUE, AuthScheme.NTLM, NTLM_PRINCIPAL, NTLM_DOMAIN, NTLM_HEADER_KEY, NTLM_HEADER_VALUE, NTLM_HEADER_VALUE, TRUE },
-            { FALSE, AuthScheme.NTLM, NTLM_PRINCIPAL, NTLM_DOMAIN, NTLM_HEADER_KEY, NTLM_HEADER_VALUE, null, TRUE },
-            { TRUE, AuthScheme.NTLM, NTLM_PRINCIPAL, NTLM_DOMAIN, NTLM_HEADER_KEY, NTLM_HEADER_VALUE, NTLM_HEADER_VALUE, FALSE },
-            { FALSE, AuthScheme.NTLM, NTLM_PRINCIPAL, NTLM_DOMAIN, NTLM_HEADER_KEY, NTLM_HEADER_VALUE, null, FALSE },
-            { TRUE, AuthScheme.SPNEGO, null, null, null, null, null, TRUE },
-            { TRUE, AuthScheme.SPNEGO, null, null, null, null, NTLM_MSG_TYPE_1, FALSE }
+            { TRUE, AuthScheme.BASIC, null, null, null, null, null },
+            { TRUE, AuthScheme.DIGEST, null, null, null, null, null },
+            { TRUE, AuthScheme.KERBEROS, null, null, null, null, null },
+            { TRUE, AuthScheme.NONE, null, null, null, null, null },
+            { TRUE, AuthScheme.NTLM, NTLM_PRINCIPAL, NTLM_DOMAIN, null, null, NTLM_MSG_TYPE_1 },
+            { FALSE, AuthScheme.NTLM, NTLM_PRINCIPAL, NTLM_DOMAIN, null, null, NTLM_MSG_TYPE_1 },
+            { TRUE, AuthScheme.NTLM, NTLM_PRINCIPAL, NTLM_DOMAIN, NTLM_HEADER_KEY, NTLM_HEADER_VALUE, NTLM_HEADER_VALUE },
+            { FALSE, AuthScheme.NTLM, NTLM_PRINCIPAL, NTLM_DOMAIN, NTLM_HEADER_KEY, NTLM_HEADER_VALUE, null },
+            { TRUE, AuthScheme.SPNEGO, null, null, null, null, null },
         };
     }
 
-    @Test(dataProvider = "proxyAuthorization")
+    @Test(
+        description = "W-10863931: When the connection is not an NTLM one, the NTLM proxy authorization is not required.",
+        dataProvider = "proxyAuthorization"
+    )
     public void perConnectionProxyAuthorizationHeaderReturnsTheProxyAuthorizationExpected(
         boolean connect, AuthScheme authScheme, String principal, String ntlDomain, String headerKey,
-        String headerValue, String proxyAuthorizationExpected, boolean properProxyAuthorization) throws IOException {
+        String headerValue, String proxyAuthorizationExpected) throws IOException {
 
         final ProxyServer proxyServer = new ProxyServer(HOST, port, principal, PASSWORD);
         proxyServer.setNtlmDomain(ntlDomain);
@@ -84,8 +79,7 @@ public class AuthenticatorUtilsTest {
             .setHeader(headerKey, headerValue)
             .build();
 
-        AuthenticatorUtils.setProperProxyAuthorization(properProxyAuthorization);
-        String proxyAuthorization = AuthenticatorUtils.perConnectionProxyAuthorizationHeader(request, proxyServer, connect);
+        String proxyAuthorization = perConnectionProxyAuthorizationHeader(request, proxyServer, connect);
 
         assertEquals(proxyAuthorization, proxyAuthorizationExpected);
     }
