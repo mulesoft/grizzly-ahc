@@ -17,7 +17,6 @@ import static com.ning.http.util.AsyncHttpProviderUtils.getNTLM;
 import static com.ning.http.util.MiscUtils.isNonEmpty;
 
 import static java.lang.Boolean.getBoolean;
-import static java.lang.System.getProperty;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 
 import com.ning.http.client.ProxyServer;
@@ -34,7 +33,7 @@ import java.util.List;
 public final class AuthenticatorUtils {
     private static final String PROXY_AUTH_HEADER = "Proxy-Authorization";
     private static final String ALWAYS_SEND_NTLM_HEADER = "mule.http.alwaysSendNTLMHeader";
-    private static final boolean alwaysSendNtlmHeader = getBoolean(getProperty(ALWAYS_SEND_NTLM_HEADER, "false"));
+    private static final boolean alwaysSendNtlmHeader = getBoolean(ALWAYS_SEND_NTLM_HEADER);
     
     public static String perConnectionAuthorizationHeader(Request request,
             Uri uri, ProxyServer proxyServer, Realm realm) throws IOException {
