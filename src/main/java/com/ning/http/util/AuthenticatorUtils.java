@@ -16,7 +16,7 @@ import static com.ning.http.util.AsyncHttpProviderUtils.getNonEmptyPath;
 import static com.ning.http.util.AsyncHttpProviderUtils.getNTLM;
 import static com.ning.http.util.MiscUtils.isNonEmpty;
 
-import static java.lang.Boolean.parseBoolean;
+import static java.lang.Boolean.getBoolean;
 import static java.lang.System.getProperty;
 import static java.nio.charset.StandardCharsets.ISO_8859_1;
 
@@ -33,8 +33,8 @@ import java.util.List;
 
 public final class AuthenticatorUtils {
     private static final String PROXY_AUTH_HEADER = "Proxy-Authorization";
-    private static final String AVOID_SENDING_NTLM_HEADER = "mule.http.avoidSendingNTLMHeader";
-    private static boolean avoidSendingNtlmHeader = parseBoolean(getProperty(AVOID_SENDING_NTLM_HEADER, "true"));
+    private static final String ALWAYS_SEND_NTLM_HEADER = "mule.http.alwaysSendNTLMHeader";
+    private static final boolean alwaysSendNtlmHeader = getBoolean(getProperty(ALWAYS_SEND_NTLM_HEADER, "false"));
     
     public static String perConnectionAuthorizationHeader(Request request,
             Uri uri, ProxyServer proxyServer, Realm realm) throws IOException {
@@ -103,10 +103,10 @@ public final class AuthenticatorUtils {
             Request request, ProxyServer proxyServer, boolean connect)
             throws IOException {
 
-        if (avoidSendingNtlmHeader) {
-            return getProxyAuthorization(request, proxyServer, connect);
-        } else {
+        if (alwaysSendNtlmHeader) {
             return getNtlmProxyAuthorization(request, proxyServer, connect);
+        } else {
+            return getProxyAuthorization(request, proxyServer, connect);
         }
     }
 
@@ -143,6 +143,10 @@ public final class AuthenticatorUtils {
         return proxyAuthorization;
     }
 
+    /**
+     * This method along with the ALWAYS_SEND_NTLM_HEADER system property must be removed in the next cycle,
+     * after verifying there was no unexpected behaviour.
+     */
     private static String getNtlmProxyAuthorization(Request request, ProxyServer proxyServer, boolean connect) {
         String proxyAuthorization = null;
         if (connect) {
