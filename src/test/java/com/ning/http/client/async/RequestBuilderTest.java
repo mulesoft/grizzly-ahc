@@ -15,19 +15,22 @@
  */
 package com.ning.http.client.async;
 
+import static com.ning.http.client.cookie.CookieDecoder.decode;
 import static org.testng.Assert.assertEquals;
-
-import org.testng.annotations.Test;
-
-import com.ning.http.client.Param;
-import com.ning.http.client.Request;
-import com.ning.http.client.RequestBuilder;
+import static org.testng.Assert.assertTrue;
+import static org.testng.AssertJUnit.assertFalse;
 
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
 import java.net.URISyntaxException;
 import java.util.List;
 import java.util.concurrent.ExecutionException;
+
+import com.ning.http.client.Param;
+import com.ning.http.client.Request;
+import com.ning.http.client.RequestBuilder;
+import com.ning.http.client.cookie.Cookie;
+import org.testng.annotations.Test;
 
 public class RequestBuilderTest {
 
@@ -140,5 +143,37 @@ public class RequestBuilderTest {
         Request request = rb.build();
         assertEquals(request.getUrl(), preEncodedUrl);
         assertEquals(request.getUri().toJavaNetURI().toString(), preEncodedUrl);
+    }
+
+    @Test(groups = {"standalone", "default_provider"})
+    public void testCookieReplace() {
+        RequestBuilder rb = new RequestBuilder();
+        rb.addOrReplaceCookie(decode("TheCookieName=OldCookieValue"));
+        rb.addOrReplaceCookie(decode("TheCookieName=NewCookieValue"));
+        Request request = rb.build();
+
+        assertFalse(containsCookie(request, "TheCookieName=OldCookieValue"));
+        assertTrue(containsCookie(request, "TheCookieName=NewCookieValue"));
+    }
+
+    @Test(groups = {"standalone", "default_provider"})
+    public void testCookieRemove() {
+        RequestBuilder rb = new RequestBuilder();
+        rb.addOrReplaceCookie(decode("TheCookieName=OldCookieValue"));
+
+        // Expiration date in the past should remove the cookie from the resulting request.
+        rb.addOrReplaceCookie(decode("TheCookieName=NewCookieValue; Expires=Sat, 02 Oct 1993 14:20:00 GMT"));
+        Request request = rb.build();
+
+        assertTrue(request.getCookies().isEmpty());
+    }
+
+    boolean containsCookie(Request request, String cookieAsString) {
+        for (Cookie cookie : request.getCookies()) {
+            if (cookie.toString().equals(cookieAsString)) {
+                return true;
+            }
+        }
+        return false;
     }
 }

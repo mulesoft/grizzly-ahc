@@ -385,19 +385,31 @@ public abstract class RequestBuilderBase<T extends RequestBuilderBase<T>> {
     }
 
     public T addOrReplaceCookie(Cookie cookie) {
-        int index = -1;
         lazyInitCookies();
+        int index = getCookieIndexByName(cookie.getName());
 
-        if (request.cookies.contains(cookie)) {
-            index = request.cookies.indexOf(cookie);
-            request.cookies.set(index, cookie);
-        } else {
-            // if cookie not found, then add it
+        if (index == -1) {
+            // cookie not found, then add it
             request.cookies.add(cookie);
+        } else {
+            // cookie found, replace it
+            request.cookies.set(index, cookie);
         }
         return derived.cast(this);
     }
-    
+
+    private int getCookieIndexByName(String name) {
+        int index = 0;
+        for (Cookie c : request.cookies) {
+            if (c.getName().equals(name)) {
+                return index;
+            } else {
+                index += 1;
+            }
+        }
+        return -1;
+    }
+
     public void resetCookies() {
         if (request.cookies != null)
             request.cookies.clear();
