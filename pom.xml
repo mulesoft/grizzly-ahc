@@ -171,9 +171,9 @@
         </dependency>
         <dependency>
             <groupId>org.mockito</groupId>
-            <artifactId>mockito-core</artifactId>
-            <version>3.2.4</version>
+            <artifactId>mockito-inline</artifactId>
             <scope>test</scope>
+            <version>${mockitoVersion}</version>
         </dependency>
         <dependency>
             <groupId>org.eclipse.jetty</groupId>
@@ -556,6 +556,8 @@
         <maven.compiler.target>1.8</maven.compiler.target>
         <surefire.version>2.12</surefire.version>
         <jetty.version>9.4.9.v20180320</jetty.version>
+
+        <mockitoVersion>4.11.0</mockitoVersion>
     </properties>
 </project>
 
