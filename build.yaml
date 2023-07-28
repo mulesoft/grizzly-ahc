@@ -1,0 +1,11 @@
+devBranchesRegex: "support/1_14-mule"
+
+# Disable stage till DEL-3987 is fixed
+enableAfterReleaseVersionUpdateStage: false
+projectType: runtime
+jdkTool: OPEN-JDK17
+additionalTestConfigs:
+  jdk8:
+    testJdkTool: OPEN-JDK8
+  jdk11:
+    testJdkTool: OPEN-JDK11
