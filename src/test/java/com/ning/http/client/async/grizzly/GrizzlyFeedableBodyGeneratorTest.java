@@ -13,6 +13,7 @@
 
 package com.ning.http.client.async.grizzly;
 
+import static com.ning.http.util.FreePortFinder.findFreePort;
 import static org.glassfish.grizzly.http.server.NetworkListener.DEFAULT_NETWORK_HOST;
 import static org.glassfish.grizzly.memory.MemoryManager.DEFAULT_MEMORY_MANAGER;
 import static org.testng.Assert.assertEquals;
@@ -58,8 +59,8 @@ public class GrizzlyFeedableBodyGeneratorTest {
     private static final byte[] DATA =
             "aAbBcCdDeEfFgGhHiIjJkKlLmMnNoOpPqQrRsStTuUvVwWxXyYzZ".getBytes(Charsets.ASCII_CHARSET);
     private static final int TEMP_FILE_SIZE = 2 * 1024 * 1024;
-    private static final int NON_SECURE_PORT = 9991;
-    private static final int SECURE_PORT = 9992;
+    private static final int NON_SECURE_PORT = findFreePort();
+    private static final int SECURE_PORT = findFreePort();
 
 
     private HttpServer server;

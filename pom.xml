@@ -235,7 +235,7 @@
             <plugin>
                 <groupId>org.apache.maven.plugins</groupId>
                 <artifactId>maven-compiler-plugin</artifactId>
-                <version>2.3.2</version>
+                <version>3.11.0</version>
                 <configuration>
                     <maxmem>1024m</maxmem>
                 </configuration>
@@ -449,6 +449,15 @@
     </reporting>
     <profiles>
         <profile>
+            <id>java-8-api</id>
+            <activation>
+                <jdk>[9,)</jdk>
+            </activation>
+            <properties>
+                <maven.compiler.release>${javaReleaseVersion}</maven.compiler.release>
+            </properties>
+        </profile>
+        <profile>
             <id>release-sign-artifacts</id>
             <activation>
                 <property>
@@ -550,6 +559,7 @@
     </profiles>
 
     <properties>
+        <javaReleaseVersion>8</javaReleaseVersion>
         <additionalparam>-Xdoclint:none</additionalparam>
         <grizzly.version>2.3.36-MULE-019</grizzly.version>
         <maven.compiler.source>1.8</maven.compiler.source>
