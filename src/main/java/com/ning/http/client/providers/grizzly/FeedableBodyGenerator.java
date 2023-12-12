@@ -399,7 +399,7 @@ public class FeedableBodyGenerator implements BodyGenerator {
          * will block is dependent on the write timeout of the transport
          * associated with the specified connection.
          */
-        private static void blockUntilQueueFree(final Connection c) {
+        static void blockUntilQueueFree(final Connection c) {
             if (!c.canWrite()) {
                 final FutureImpl<Boolean> future =
                         Futures.createSafeFuture();
@@ -566,20 +566,29 @@ public class FeedableBodyGenerator implements BodyGenerator {
         @Override
         public synchronized void flush() throws IOException {
             final Connection c = feedableBodyGenerator.context.getConnection();
-            if (isReady()) {
-                boolean notReady = writeUntilFullOrDone(c);
-                if (!isDone()) {
-                    if (notReady) {
-                        notifyReadyToFeed(new ReadyToFeedListenerImpl());
-                    } else {
-                        // write queue is full, leverage WriteListener to let us know
-                        // when it is safe to write again.
-                        c.notifyCanWrite(new WriteHandlerImpl());
+            boolean continueWriting = true;
+            while (continueWriting) {
+                continueWriting = false;
+                if (isReady()) {
+                    boolean notReady = writeUntilFullOrDone(c);
+                    if (!isDone()) {
+                        if (notReady) {
+                            notifyReadyToFeed(new ReadyToFeedListenerImpl());
+                        } else {
+                            // write queue is full, leverage WriteListener to let us know
+                            // when it is safe to write again.
+                            continueWriting = onFullWriteQueue(c);
+                        }
                     }
+                } else {
+                    notifyReadyToFeed(new ReadyToFeedListenerImpl());
                 }
-            } else {
-                notifyReadyToFeed(new ReadyToFeedListenerImpl());
             }
+        }
+
+        protected boolean onFullWriteQueue(Connection c) {
+            c.notifyCanWrite(new WriteHandlerImpl());
+            return false;
         }
 
 

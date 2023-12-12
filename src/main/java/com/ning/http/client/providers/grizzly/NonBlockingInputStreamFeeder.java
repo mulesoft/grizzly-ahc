@@ -19,6 +19,7 @@ import java.io.IOException;
 import java.io.InputStream;
 
 import org.glassfish.grizzly.Buffer;
+import org.glassfish.grizzly.Connection;
 import org.glassfish.grizzly.memory.Buffers;
 import org.slf4j.Logger;
 
@@ -62,6 +63,11 @@ public class NonBlockingInputStreamFeeder extends FeedableBodyGenerator.NonBlock
   }
 
   @Override
+  public synchronized void flush() throws IOException {
+    super.flush();
+  }
+
+  @Override
   public boolean isDone() {
     return isDone;
   }
@@ -95,5 +101,17 @@ public class NonBlockingInputStreamFeeder extends FeedableBodyGenerator.NonBlock
       content.mark(0);
     }
     super.reset();
+  }
+
+  @Override
+  protected boolean onFullWriteQueue(Connection c) {
+    // This is done to guarantee that the FilterChainContext is not closed
+    // doing the attempt to feed asynchronously.
+    // The Write Queue is blocked in FeedBodyGenerator#feed too. This is only blocking
+    // When the spaceBytes for the TaskQueue is more than the max queue size.
+    // The write operations themselves are not blocking and in case this situation
+    // happens we always get a NPE without this fix.
+    blockUntilQueueFree(c);
+    return true;
   }
 }
