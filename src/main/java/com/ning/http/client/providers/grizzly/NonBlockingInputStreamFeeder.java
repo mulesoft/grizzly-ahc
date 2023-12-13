@@ -63,11 +63,6 @@ public class NonBlockingInputStreamFeeder extends FeedableBodyGenerator.NonBlock
   }
 
   @Override
-  public synchronized void flush() throws IOException {
-    super.flush();
-  }
-
-  @Override
   public boolean isDone() {
     return isDone;
   }
