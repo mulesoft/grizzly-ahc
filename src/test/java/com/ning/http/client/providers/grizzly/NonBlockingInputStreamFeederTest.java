@@ -4,7 +4,7 @@
  * license, a copy of which has been included with this distribution in the
  * LICENSE.txt file.
  */
-package com.ning.http.client.async;
+package com.ning.http.client.providers.grizzly;
 
 import static java.lang.System.arraycopy;
 import static java.util.Arrays.copyOf;
@@ -12,7 +12,10 @@ import static java.util.Arrays.copyOfRange;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.doAnswer;
+import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.spy;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
 
 import java.io.ByteArrayInputStream;
@@ -21,10 +24,11 @@ import java.util.LinkedList;
 import java.util.List;
 
 import org.glassfish.grizzly.Buffer;
+import org.glassfish.grizzly.Connection;
+import org.glassfish.grizzly.WriteHandler;
+import org.glassfish.grizzly.filterchain.FilterChainContext;
+import org.glassfish.grizzly.http.HttpRequestPacket;
 import org.testng.annotations.Test;
-
-import com.ning.http.client.providers.grizzly.FeedableBodyGenerator;
-import com.ning.http.client.providers.grizzly.NonBlockingInputStreamFeeder;
 
 public class NonBlockingInputStreamFeederTest {
 
@@ -39,6 +43,28 @@ public class NonBlockingInputStreamFeederTest {
   @Test
   public void feedEmptyPayload() throws IOException {
     assertFeeding(EMPTY);
+  }
+
+  @Test
+  public void whenWriteQueuIsFullTheOnQueueWriteStrategyIsAppliedAndAllTheDataIsConsumed() throws IOException {
+    byte[] data = DATA;
+    int bufferSize = data.length / 2;
+    FeedableBodyGenerator feedableBodyGenerator = new FeedableBodyGenerator();
+    FeedableBodyGenerator spiedFeedableBodyGenerator = spy(feedableBodyGenerator);
+    NonBlockingInputStreamFeeder nonBlockingInputStreamFeeder =
+            new NonBlockingInputStreamFeeder(spiedFeedableBodyGenerator, new ByteArrayInputStream(data), bufferSize);
+    NonBlockingInputStreamFeeder spiedNonBlockingInputStreamFeeder = spy(nonBlockingInputStreamFeeder);
+    spiedFeedableBodyGenerator.setFeeder(spiedNonBlockingInputStreamFeeder);
+    FilterChainContext filterChainContext = mock(FilterChainContext.class);
+    HttpRequestPacket requestPacket = mock(HttpRequestPacket.class);
+    Connection connection = mock(Connection.class);
+    when(filterChainContext.getConnection()).thenReturn(connection);
+    when(connection.getMaxAsyncWriteQueueSize()).thenReturn(100);
+    when(spiedNonBlockingInputStreamFeeder.isReady()).thenReturn(true).thenReturn(false);
+    spiedFeedableBodyGenerator.initializeAsynchronousTransfer(filterChainContext, requestPacket);
+    verify(spiedNonBlockingInputStreamFeeder).onFullWriteQueue(connection);
+    verify(connection).notifyCanWrite(any(WriteHandler.class));
+    assertFeeding(DATA);
   }
 
   private void assertFeeding(byte[] data) throws IOException {
