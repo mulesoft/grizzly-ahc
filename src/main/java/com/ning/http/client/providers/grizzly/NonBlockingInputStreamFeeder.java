@@ -105,7 +105,8 @@ public class NonBlockingInputStreamFeeder extends FeedableBodyGenerator.NonBlock
     // The Write Queue is blocked in FeedBodyGenerator#feed too. This is only blocking
     // When the spaceBytes for the TaskQueue is more than the max queue size.
     // The write operations themselves are not blocking and in case this situation
-    // happens we always get a NPE without this fix.
+    // happens we always can get a NPE without this fix because the
+    // FilterChainContext is reset and recycle to use for the same thread.
     blockUntilQueueFree(c);
     return true;
   }
