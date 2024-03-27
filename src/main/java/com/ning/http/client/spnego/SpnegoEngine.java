@@ -38,6 +38,7 @@
 package com.ning.http.client.spnego;
 
 import org.ietf.jgss.GSSContext;
+import org.ietf.jgss.GSSCredential;
 import org.ietf.jgss.GSSException;
 import org.ietf.jgss.GSSManager;
 import org.ietf.jgss.GSSName;
@@ -48,6 +49,20 @@ import org.slf4j.LoggerFactory;
 import com.ning.http.util.Base64;
 
 import java.io.IOException;
+import java.security.Principal;
+import java.security.PrivilegedActionException;
+import java.security.PrivilegedExceptionAction;
+import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Map;
+import java.util.Set;
+import java.util.concurrent.Callable;
+
+import javax.security.auth.Subject;
+import javax.security.auth.kerberos.KerberosPrincipal;
+import javax.security.auth.login.AppConfigurationEntry;
+import javax.security.auth.login.Configuration;
+import javax.security.auth.login.LoginContext;
 
 /**
  * SPNEGO (Simple and Protected GSSAPI Negotiation Mechanism) authentication
@@ -74,7 +89,7 @@ public class SpnegoEngine {
         this(null);
     }
 
-    public String generateToken(String server) throws Throwable {
+    public String generateToken(String server, String clientPrincipal, String keytabFilename) throws Throwable {
 
         try {
             log.debug("init {}", server);
@@ -102,9 +117,10 @@ public class SpnegoEngine {
             boolean tryKerberos = false;
             try {
                 GSSManager manager = GSSManager.getInstance();
+                GSSCredential gssCredential = getCredential(clientPrincipal, keytabFilename, manager, negotiationOid);
                 GSSName serverName = manager.createName("HTTP@" + server, GSSName.NT_HOSTBASED_SERVICE);
                 gssContext = manager.createContext(
-                        serverName.canonicalize(negotiationOid), negotiationOid, null,
+                        serverName.canonicalize(negotiationOid), negotiationOid, gssCredential,
                         GSSContext.DEFAULT_LIFETIME);
                 gssContext.requestMutualAuth(true);
                 gssContext.requestCredDeleg(true);
@@ -126,8 +142,9 @@ public class SpnegoEngine {
                 negotiationOid = new Oid(KERBEROS_OID);
                 GSSManager manager = GSSManager.getInstance();
                 GSSName serverName = manager.createName("HTTP@" + server, GSSName.NT_HOSTBASED_SERVICE);
+                GSSCredential gssCredential = getCredential(clientPrincipal, keytabFilename, manager, negotiationOid);
                 gssContext = manager.createContext(
-                        serverName.canonicalize(negotiationOid), negotiationOid, null,
+                        serverName.canonicalize(negotiationOid), negotiationOid, gssCredential,
                         GSSContext.DEFAULT_LIFETIME);
                 gssContext.requestMutualAuth(true);
                 gssContext.requestCredDeleg(true);
@@ -172,6 +189,79 @@ public class SpnegoEngine {
             throw new Exception(gsse.getMessage());
         } catch (IOException ex) {
             throw new Exception(ex.getMessage());
+        }
+    }
+
+    private GSSCredential getCredential(String clientPrincipal,
+                                        String keytabFilename,
+                                        GSSManager manager,
+                                        final Oid negotiationOid) throws Exception {
+        return doAs(clientPrincipal, keytabFilename, new Callable<GSSCredential>() {
+            @Override
+            public GSSCredential call() throws Exception {
+                return manager
+                        .createCredential(null, GSSCredential.INDEFINITE_LIFETIME, negotiationOid, GSSCredential.INITIATE_AND_ACCEPT);
+            }
+        });
+
+    }
+
+    private static <T> T doAs(String principal, String keytabFilename, final Callable<T> callable) throws Exception {
+        LoginContext loginContext = null;
+        try {
+            Set<Principal> principals = new HashSet<>();
+            principals.add(new KerberosPrincipal(principal));
+            Subject subject = new Subject(false, principals, new HashSet<>(), new HashSet<>());
+            loginContext = new LoginContext("", subject, null, new KerberosConfiguration(principal, keytabFilename));
+            loginContext.login();
+            return Subject.doAs(subject, new PrivilegedExceptionAction<T>() {
+                @Override
+                public T run() throws Exception {
+                    return callable.call();
+                }
+            });
+        } catch (PrivilegedActionException ex) {
+            throw ex.getException();
+        } finally {
+            if (loginContext != null) {
+                loginContext.logout();
+            }
+        }
+    }
+
+
+    private static class KerberosConfiguration extends Configuration {
+
+        private final String principal;
+        private final String keytabFileName;
+
+        public KerberosConfiguration(String principal, String keytabFileName) {
+            this.principal = principal;
+            this.keytabFileName = keytabFileName;
+        }
+
+        @Override
+        public AppConfigurationEntry[] getAppConfigurationEntry(String name) {
+            Map<String, String> options = new HashMap<>();
+            options.put("keyTab", keytabFileName);
+            options.put("principal", principal);
+            options.put("useKeyTab", "true");
+            options.put("storeKey", "true");
+            options.put("doNotPrompt", "true");
+            options.put("useTicketCache", "true");
+            options.put("renewTGT", "true");
+            options.put("refreshKrb5Config", "true");
+            options.put("isInitiator", "true");
+            String ticketCache = System.getenv("KRB5CCNAME");
+            if (ticketCache != null) {
+                options.put("ticketCache", ticketCache);
+            }
+            options.put("debug", "true");
+
+            return new AppConfigurationEntry[] {
+                    new AppConfigurationEntry("com.sun.security.auth.module.Krb5LoginModule",
+                            AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
+                            options),};
         }
     }
 }
