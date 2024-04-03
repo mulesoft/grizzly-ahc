@@ -37,6 +37,9 @@
 
 package com.ning.http.client.spnego;
 
+import static javax.security.auth.Subject.doAs;
+import static org.slf4j.LoggerFactory.getLogger;
+
 import org.ietf.jgss.GSSContext;
 import org.ietf.jgss.GSSCredential;
 import org.ietf.jgss.GSSException;
@@ -44,24 +47,17 @@ import org.ietf.jgss.GSSManager;
 import org.ietf.jgss.GSSName;
 import org.ietf.jgss.Oid;
 import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
 
 import com.ning.http.util.Base64;
 
 import java.io.IOException;
 import java.security.Principal;
 import java.security.PrivilegedActionException;
-import java.security.PrivilegedExceptionAction;
-import java.util.HashMap;
 import java.util.HashSet;
-import java.util.Map;
 import java.util.Set;
-import java.util.concurrent.Callable;
 
 import javax.security.auth.Subject;
 import javax.security.auth.kerberos.KerberosPrincipal;
-import javax.security.auth.login.AppConfigurationEntry;
-import javax.security.auth.login.Configuration;
 import javax.security.auth.login.LoginContext;
 
 /**
@@ -75,7 +71,7 @@ public class SpnegoEngine {
     private static final String SPNEGO_OID = "1.3.6.1.5.5.2";
     private static final String KERBEROS_OID = "1.2.840.113554.1.2.2";
 
-    private final Logger log = LoggerFactory.getLogger(getClass());
+    private static final Logger LOGGER = getLogger(SpnegoEngine.class);
 
     private final SpnegoTokenGenerator spnegoGenerator;
 
@@ -92,7 +88,7 @@ public class SpnegoEngine {
     public String generateToken(String server, String clientPrincipal, String keytabFilename) throws Throwable {
 
         try {
-            log.debug("init {}", server);
+            LOGGER.debug("init {}", server);
             /* Using the SPNEGO OID is the correct method.
              * Kerberos v5 works for IIS but not JBoss. Unwrapping
              * the initial token when using SPNEGO OID looks like what is
@@ -117,7 +113,7 @@ public class SpnegoEngine {
             boolean tryKerberos = false;
             try {
                 GSSManager manager = GSSManager.getInstance();
-                GSSCredential gssCredential = getCredential(clientPrincipal, keytabFilename, manager, negotiationOid);
+                GSSCredential gssCredential = getGssCredential(clientPrincipal, keytabFilename, manager, negotiationOid);
                 GSSName serverName = manager.createName("HTTP@" + server, GSSName.NT_HOSTBASED_SERVICE);
                 gssContext = manager.createContext(
                         serverName.canonicalize(negotiationOid), negotiationOid, gssCredential,
@@ -125,11 +121,11 @@ public class SpnegoEngine {
                 gssContext.requestMutualAuth(true);
                 gssContext.requestCredDeleg(true);
             } catch (GSSException ex) {
-                log.error("generateToken", ex);
+                LOGGER.error("generateToken", ex);
                 // BAD MECH means we are likely to be using 1.5, fall back to Kerberos MECH.
                 // Rethrow any other exception.
                 if (ex.getMajor() == GSSException.BAD_MECH) {
-                    log.debug("GSSException BAD_MECH, retry with Kerberos MECH");
+                    LOGGER.debug("GSSException BAD_MECH, retry with Kerberos MECH");
                     tryKerberos = true;
                 } else {
                     throw ex;
@@ -138,11 +134,11 @@ public class SpnegoEngine {
             }
             if (tryKerberos) {
                 /* Kerberos v5 GSS-API mechanism defined in RFC 1964.*/
-                log.debug("Using Kerberos MECH {}", KERBEROS_OID);
+                LOGGER.debug("Using Kerberos MECH {}", KERBEROS_OID);
                 negotiationOid = new Oid(KERBEROS_OID);
                 GSSManager manager = GSSManager.getInstance();
                 GSSName serverName = manager.createName("HTTP@" + server, GSSName.NT_HOSTBASED_SERVICE);
-                GSSCredential gssCredential = getCredential(clientPrincipal, keytabFilename, manager, negotiationOid);
+                GSSCredential gssCredential = getGssCredential(clientPrincipal, keytabFilename, manager, negotiationOid);
                 gssContext = manager.createContext(
                         serverName.canonicalize(negotiationOid), negotiationOid, gssCredential,
                         GSSContext.DEFAULT_LIFETIME);
@@ -171,11 +167,11 @@ public class SpnegoEngine {
             gssContext.dispose();
 
             String tokenstr = new String(Base64.encode(token));
-            log.debug("Sending response '{}' back to the server", tokenstr);
+            LOGGER.debug("Sending response '{}' back to the server", tokenstr);
 
             return tokenstr;
         } catch (GSSException gsse) {
-            log.error("generateToken", gsse);
+            LOGGER.error("generateToken", gsse);
             if (gsse.getMajor() == GSSException.DEFECTIVE_CREDENTIAL
                     || gsse.getMajor() == GSSException.CREDENTIALS_EXPIRED)
                 throw new Exception(gsse.getMessage(), gsse);
@@ -192,76 +188,24 @@ public class SpnegoEngine {
         }
     }
 
-    private GSSCredential getCredential(String clientPrincipal,
-                                        String keytabFilename,
-                                        GSSManager manager,
-                                        final Oid negotiationOid) throws Exception {
-        return doAs(clientPrincipal, keytabFilename, new Callable<GSSCredential>() {
-            @Override
-            public GSSCredential call() throws Exception {
-                return manager
-                        .createCredential(null, GSSCredential.INDEFINITE_LIFETIME, negotiationOid, GSSCredential.INITIATE_AND_ACCEPT);
-            }
-        });
-
-    }
-
-    private static <T> T doAs(String principal, String keytabFilename, final Callable<T> callable) throws Exception {
+    private static GSSCredential getGssCredential(String clientPrincipal,
+                                                  String keytabFilename,
+                                                  GSSManager manager,
+                                                  final Oid negotiationOid) throws Exception {
         LoginContext loginContext = null;
         try {
             Set<Principal> principals = new HashSet<>();
-            principals.add(new KerberosPrincipal(principal));
+            principals.add(new KerberosPrincipal(clientPrincipal));
             Subject subject = new Subject(false, principals, new HashSet<>(), new HashSet<>());
-            loginContext = new LoginContext("", subject, null, new KerberosConfiguration(principal, keytabFilename));
+            loginContext = new LoginContext("", subject, null, new KeytabKerberosConfiguration(clientPrincipal, keytabFilename));
             loginContext.login();
-            return Subject.doAs(subject, new PrivilegedExceptionAction<T>() {
-                @Override
-                public T run() throws Exception {
-                    return callable.call();
-                }
-            });
+            return doAs(subject, new CreateGssCredentialAction(manager, negotiationOid));
         } catch (PrivilegedActionException ex) {
             throw ex.getException();
         } finally {
             if (loginContext != null) {
                 loginContext.logout();
             }
-        }
-    }
-
-
-    private static class KerberosConfiguration extends Configuration {
-
-        private final String principal;
-        private final String keytabFileName;
-
-        public KerberosConfiguration(String principal, String keytabFileName) {
-            this.principal = principal;
-            this.keytabFileName = keytabFileName;
-        }
-
-        @Override
-        public AppConfigurationEntry[] getAppConfigurationEntry(String name) {
-            Map<String, String> options = new HashMap<>();
-            options.put("keyTab", keytabFileName);
-            options.put("principal", principal);
-            options.put("useKeyTab", "true");
-            options.put("storeKey", "true");
-            options.put("doNotPrompt", "true");
-            options.put("useTicketCache", "true");
-            options.put("renewTGT", "true");
-            options.put("refreshKrb5Config", "true");
-            options.put("isInitiator", "true");
-            String ticketCache = System.getenv("KRB5CCNAME");
-            if (ticketCache != null) {
-                options.put("ticketCache", ticketCache);
-            }
-            options.put("debug", "true");
-
-            return new AppConfigurationEntry[] {
-                    new AppConfigurationEntry("com.sun.security.auth.module.Krb5LoginModule",
-                            AppConfigurationEntry.LoginModuleControlFlag.REQUIRED,
-                            options),};
         }
     }
 }
