@@ -422,7 +422,6 @@ public class FeedableBodyGenerator implements BodyGenerator {
                 // is not read to be written to
                 if(!queueStatus)
                     return false;
-                System.out.println("ans is" + queueStatus);// Return the result of block method
             }
             return true;
 
