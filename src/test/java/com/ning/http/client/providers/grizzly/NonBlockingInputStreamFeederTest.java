@@ -29,6 +29,7 @@ import java.util.concurrent.TimeUnit;
 
 import org.glassfish.grizzly.Buffer;
 import org.glassfish.grizzly.Connection;
+import org.glassfish.grizzly.Transport;
 import org.glassfish.grizzly.WriteHandler;
 import org.glassfish.grizzly.filterchain.FilterChainContext;
 import org.glassfish.grizzly.http.HttpRequestPacket;
@@ -87,7 +88,9 @@ public class NonBlockingInputStreamFeederTest {
     Connection connection = mock(Connection.class);
     when(filterChainContext.getConnection()).thenReturn(connection);
     when(connection.getMaxAsyncWriteQueueSize()).thenReturn(100);
-
+    Transport transport = mock(Transport.class);
+    when(connection.getTransport()).thenReturn(transport);
+    when(transport.getWriteTimeout(any(TimeUnit.class))).thenReturn(1L);
     FutureImpl<Boolean> future = mock(FutureImpl.class);
     when(future.get(anyLong(), any(TimeUnit.class))).thenThrow(new ExecutionException(new IOException("Mocked exception")));
     when(future.get()).thenThrow(new ExecutionException(new IOException("Mocked exception")));
