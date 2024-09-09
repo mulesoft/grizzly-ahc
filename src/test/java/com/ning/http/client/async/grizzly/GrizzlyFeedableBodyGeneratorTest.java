@@ -322,7 +322,7 @@ public class GrizzlyFeedableBodyGeneratorTest {
             try {
                 latch.await(1, TimeUnit.MINUTES);
             } catch (InterruptedException e) {
-                fail("Latch interrupted");
+                fail("Latch interrupted now");
             } finally {
                 service.shutdownNow();
             }
