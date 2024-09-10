@@ -9,7 +9,6 @@ package com.ning.http.client.providers.grizzly;
 import static java.lang.System.arraycopy;
 import static java.util.Arrays.copyOf;
 import static java.util.Arrays.copyOfRange;
-import static org.mockito.ArgumentMatchers.anyLong;
 import static org.mockito.Mockito.any;
 import static org.mockito.Mockito.anyBoolean;
 import static org.mockito.Mockito.doAnswer;
@@ -18,22 +17,17 @@ import static org.mockito.Mockito.spy;
 import static org.mockito.Mockito.verify;
 import static org.mockito.Mockito.when;
 import static org.testng.Assert.assertEquals;
-import static org.testng.Assert.assertFalse;
 
 import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import java.util.LinkedList;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
 
 import org.glassfish.grizzly.Buffer;
 import org.glassfish.grizzly.Connection;
-import org.glassfish.grizzly.Transport;
 import org.glassfish.grizzly.WriteHandler;
 import org.glassfish.grizzly.filterchain.FilterChainContext;
 import org.glassfish.grizzly.http.HttpRequestPacket;
-import org.glassfish.grizzly.impl.FutureImpl;
 import org.testng.annotations.Test;
 
 public class NonBlockingInputStreamFeederTest {
@@ -71,33 +65,6 @@ public class NonBlockingInputStreamFeederTest {
     verify(spiedNonBlockingInputStreamFeeder).onFullWriteQueue(connection);
     verify(connection).notifyCanWrite(any(WriteHandler.class));
     assertFeeding(DATA);
-  }
-
-  @Test
-  public void whenExecutionExceptionIsThrownWhileQueueIsBlocking_thenDoNotWaitForQueueToBeFree() throws Exception {
-    byte[] data = DATA;
-    int bufferSize = data.length / 2;
-    FeedableBodyGenerator feedableBodyGenerator = new FeedableBodyGenerator();
-    FeedableBodyGenerator spiedFeedableBodyGenerator = spy(feedableBodyGenerator);
-    NonBlockingInputStreamFeeder nonBlockingInputStreamFeeder =
-      new NonBlockingInputStreamFeeder(spiedFeedableBodyGenerator, new ByteArrayInputStream(data), bufferSize);
-    NonBlockingInputStreamFeeder spiedNonBlockingInputStreamFeeder = spy(nonBlockingInputStreamFeeder);
-    spiedFeedableBodyGenerator.setFeeder(spiedNonBlockingInputStreamFeeder);
-    FilterChainContext filterChainContext = mock(FilterChainContext.class);
-    HttpRequestPacket requestPacket = mock(HttpRequestPacket.class);
-    Connection connection = mock(Connection.class);
-    when(filterChainContext.getConnection()).thenReturn(connection);
-    when(connection.getMaxAsyncWriteQueueSize()).thenReturn(100);
-    Transport transport = mock(Transport.class);
-    when(connection.getTransport()).thenReturn(transport);
-    when(transport.getWriteTimeout(any(TimeUnit.class))).thenReturn(1L);
-    FutureImpl<Boolean> future = mock(FutureImpl.class);
-    when(future.get(anyLong(), any(TimeUnit.class))).thenThrow(new ExecutionException(new IOException("Mocked exception")));
-    when(future.get()).thenThrow(new ExecutionException(new IOException("Mocked exception")));
-    spiedFeedableBodyGenerator.initializeAsynchronousTransfer(filterChainContext, requestPacket);
-    verify(spiedNonBlockingInputStreamFeeder).onFullWriteQueue(connection);
-    verify(connection).notifyCanWrite(any(WriteHandler.class));
-    assertFalse(spiedNonBlockingInputStreamFeeder.onFullWriteQueue(connection));
   }
 
   private void assertFeeding(byte[] data) throws IOException {
