@@ -222,7 +222,7 @@ public class FeedableBodyGenerator implements BodyGenerator {
             public void onFailure(final Connection connection, final Throwable t) {
                 connection.closeWithReason(Exceptions.makeIOException(t));
             }
-            
+
             public void onComplete(Connection connection) {
                 if (c.equals(connection)) {
                     filter.removeHandshakeListener(this);
@@ -333,9 +333,9 @@ public class FeedableBodyGenerator implements BodyGenerator {
      * an implementation for the contract defined by the {@link #feed} method.
      */
     public static abstract class BaseFeeder implements Feeder {
-        
+
         protected final FeedableBodyGenerator feedableBodyGenerator;
-        
+
         private boolean wasLastSent;
         // -------------------------------------------------------- Constructors
 
@@ -362,26 +362,26 @@ public class FeedableBodyGenerator implements BodyGenerator {
                 throw new IllegalArgumentException(
                         "Buffer argument cannot be null.");
             }
-            
+
             if (!feedableBodyGenerator.asyncTransferInitiated) {
                 throw new IllegalStateException("Asynchronous transfer has not been initiated.");
             }
-            
+
             if (wasLastSent) {
                 if (buffer.hasRemaining()) {
                     throw new IOException("Last chunk was alredy written");
                 }
-                
+
                 return;
             }
-            
+
             blockUntilQueueFree(feedableBodyGenerator.context.getConnection());
             final HttpContent content =
                     feedableBodyGenerator.contentBuilder.content(buffer).last(last).build();
             final CompletionHandler<WriteResult> handler =
                     ((last) ? new LastPacketCompletionHandler() : null);
             feedableBodyGenerator.context.write(content, handler);
-            
+
             if (last) {
                 wasLastSent = true;
                 final HttpTransactionContext currentTransaction =
@@ -399,7 +399,7 @@ public class FeedableBodyGenerator implements BodyGenerator {
          * will block is dependent on the write timeout of the transport
          * associated with the specified connection.
          */
-        static void blockUntilQueueFree(final Connection c) {
+        static boolean blockUntilQueueFree(final Connection c) {
             if (!c.canWrite()) {
                 final FutureImpl<Boolean> future =
                         Futures.createSafeFuture();
@@ -417,24 +417,33 @@ public class FeedableBodyGenerator implements BodyGenerator {
                     }
                 });
 
-                block(c, future);
+                boolean queueStatus = block(c, future);
+                // if the queue is blocked or if there is an exception we get a false value and inform that the queue
+                // is not read to be written to
+                if(!queueStatus)
+                    return false;
             }
+            return true;
+
         }
 
-        private static void block(final Connection c,
-                                  final FutureImpl<Boolean> future) {
+        private static boolean block(final Connection c, final FutureImpl<Boolean> future) {
             try {
-                final long writeTimeout =
-                        c.getTransport().getWriteTimeout(MILLISECONDS);
+                final long writeTimeout = c.getTransport().getWriteTimeout(MILLISECONDS);
                 if (writeTimeout != -1) {
                     future.get(writeTimeout, MILLISECONDS);
                 } else {
                     future.get();
                 }
+                return true;  // Return true if the operation succeeds
             } catch (ExecutionException e) {
+                // Close the connection and return false on ExecutionException
                 c.closeWithReason(Exceptions.makeIOException(e.getCause()));
+                return false;
             } catch (Exception e) {
+                // Close the connection and return false on any other exception
                 c.closeWithReason(Exceptions.makeIOException(e));
+                return false;
             }
         }
 
@@ -603,7 +612,7 @@ public class FeedableBodyGenerator implements BodyGenerator {
                     return true;
                 }
             }
-            
+
             return false;
         }
 
