@@ -107,9 +107,7 @@ public class NonBlockingInputStreamFeeder extends FeedableBodyGenerator.NonBlock
     // The write operations themselves are not blocking and in case this situation
     // happens we always can get a NPE without this fix because the
     // FilterChainContext is reset and recycle to use for the same thread.
-
-    //We get the value for the status of the queue and we notify the flush() if write is possible
-    //if its false then we do not keep listening when the queue is free to listen to it
-    return blockUntilQueueFree(c);
+    blockUntilQueueFree(c);
+    return true;
   }
 }
