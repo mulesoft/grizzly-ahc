@@ -48,6 +48,10 @@ import java.util.concurrent.TimeUnit;
 
 import org.glassfish.grizzly.Buffer;
 import org.glassfish.grizzly.Connection;
+import org.glassfish.grizzly.Context;
+import org.glassfish.grizzly.IOEvent;
+import org.glassfish.grizzly.IOEventLifeCycleListener;
+import org.glassfish.grizzly.asyncqueue.AsyncQueue;
 import org.glassfish.grizzly.filterchain.FilterChainContext;
 import org.glassfish.grizzly.filterchain.FilterChainEvent;
 import org.glassfish.grizzly.filterchain.NextAction;
@@ -139,8 +143,7 @@ final class AhcEventFilter extends HttpClientFilter {
         final AsyncHandler handler = context.getAsyncHandler();
         if (handler != null && context.currentState != AsyncHandler.STATE.ABORT) {
             try {
-                context.currentState = handler.onBodyPartReceived(
-                        new GrizzlyResponseBodyPart(content, ctx.getConnection()));
+                context.currentState = handler.onBodyPartReceived(new GrizzlyResponseBodyPart(content, ctx));
             } catch (Exception e) {
                 handler.onThrowable(e);
             }

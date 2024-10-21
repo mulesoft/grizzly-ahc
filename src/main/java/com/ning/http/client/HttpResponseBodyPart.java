@@ -19,6 +19,8 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
+import org.glassfish.grizzly.filterchain.FilterChainContext;
+
 /**
  * A callback class used when an HTTP response body is received.
  */
@@ -86,4 +88,6 @@ public abstract class HttpResponseBodyPart {
      * @return {@link ByteBuffer}
      */
     public abstract ByteBuffer getBodyByteBuffer();
+
+    public abstract FilterChainContext getContext();
 }
