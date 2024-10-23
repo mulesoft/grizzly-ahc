@@ -1,12 +1,13 @@
 package com.ning.http.client.providers.grizzly;
 
 import org.glassfish.grizzly.filterchain.FilterChainContext;
+import org.glassfish.grizzly.filterchain.InvokeAction;
 import org.glassfish.grizzly.filterchain.NextAction;
 
 /**
  * Package-private helper used to pause and resume the event processing of a {@link FilterChainContext}.
  * Apart from the base suspend/resume mechanism from Grizzly, what this helper offers is
- * {@link #savePausedAction(FilterChainContext,NextAction) a method} to attach an {@link NextAction action} to the
+ * {@link #pauseIfNeeded(FilterChainContext,NextAction) a method} to attach an {@link NextAction action} to the
  * context, and {@link #resumeFromPausedAction(FilterChainContext) another method} to resume the execution starting
  * from that attached action.
  * This class is intended to be used only by {@link AhcEventFilter}.
@@ -17,10 +18,15 @@ final class PauseContextHelper {
         // private empty constructor to avoid wrong instantiation.
     }
 
+    /**
+     * Marks the {@link FilterChainContext} so that the event filter knows that should pause the event processing after
+     * the current action.
+     * @param ctx the {@link FilterChainContext} to be paused.
+     */
     public static void requestPause(FilterChainContext ctx) {
         synchronized (ctx) {
             PauseContext pauseContext = getPauseCtxFromAttribute(ctx);
-            if (pauseContext == null) {
+            if (null == pauseContext) {
                 setPauseCtxAttribute(ctx, new PauseContext(null));
             } else {
                 throw new IllegalStateException("Can't pause an already paused context");
@@ -28,17 +34,35 @@ final class PauseContextHelper {
         }
     }
 
+    /**
+     * A {@link FilterChainContext} has to be paused if {@link #requestPause(FilterChainContext)} was called before, but
+     * {@link #pauseIfNeeded(FilterChainContext, NextAction)} wasn't called yet.
+     * @param ctx the {@link FilterChainContext}.
+     * @return true if the context has to be paused.
+     */
     public static boolean isPauseRequested(FilterChainContext ctx) {
         synchronized (ctx) {
             PauseContext pauseContext = getPauseCtxFromAttribute(ctx);
-            if (pauseContext == null) {
+            if (null == pauseContext) {
                 return false;
             }
-            return pauseContext.getPausedAction() == null;
+            return null == pauseContext.getPausedAction();
         }
     }
 
-    public static void savePausedAction(FilterChainContext ctx, NextAction pausedAction) {
+    /**
+     * If the context has to be paused, it attaches the passed pausedAction to the {@link FilterChainContext} so that
+     * it can be resumed starting from that action later.
+     * @param ctx the {@link FilterChainContext} being paused.
+     * @param pausedAction the action to save.
+     * @return if the context has to be paused, it returns a suspend action. Otherwise, it just returns the same action
+     *         that was received as parameter.
+     */
+    public static NextAction pauseIfNeeded(FilterChainContext ctx, NextAction pausedAction) {
+        if (null == pausedAction || InvokeAction.TYPE != pausedAction.type()) {
+            return pausedAction;
+        }
+
         synchronized (ctx) {
             PauseContext pauseContext = getPauseCtxFromAttribute(ctx);
             if (pauseContext != null && pauseContext.getPausedAction() != null) {
@@ -46,14 +70,21 @@ final class PauseContextHelper {
             }
 
             if (pauseContext == null) {
-                // it was resumed
-                return;
+                // it was resumed before this method could be executed
+                return pausedAction;
             }
 
             setPauseCtxAttribute(ctx, new PauseContext(pausedAction));
+            return ctx.getSuspendAction();
         }
     }
 
+    /**
+     * Resumes the event processing with the action saved by {@link #pauseIfNeeded(FilterChainContext, NextAction)},
+     * and clears the corresponding attribute.
+     * If the action wasn't saved yet, it only clears the attribute and doesn't call resume.
+     * @param ctx the {@link FilterChainContext} to resume.
+     */
     public static void resumeFromPausedAction(FilterChainContext ctx) {
         synchronized (ctx) {
             PauseContext pauseContext = getPauseCtxFromAttribute(ctx);
@@ -82,7 +113,7 @@ final class PauseContextHelper {
 
     private static PauseContext getPauseCtxFromAttribute(FilterChainContext ctx) {
         Object attribute = ctx.getAttributes().getAttribute(PauseContext.NAME);
-        if (attribute == null) {
+        if (null == attribute) {
             return null;
         }
         if (attribute instanceof PauseContext) {

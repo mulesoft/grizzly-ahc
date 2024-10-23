@@ -14,7 +14,7 @@ package com.ning.http.client.providers.grizzly;
 
 import static com.ning.http.client.Realm.AuthScheme.NTLM;
 import static com.ning.http.client.providers.grizzly.PauseContextHelper.isPauseRequested;
-import static com.ning.http.client.providers.grizzly.PauseContextHelper.savePausedAction;
+import static com.ning.http.client.providers.grizzly.PauseContextHelper.pauseIfNeeded;
 import static com.ning.http.util.AsyncHttpProviderUtils.getNTLM;
 import static com.ning.http.util.AsyncHttpProviderUtils.isSameHostAndProtocol;
 import static com.ning.http.util.AuthenticatorUtils.getHttpHeaderForAuthScheme;
@@ -110,14 +110,7 @@ final class AhcEventFilter extends HttpClientFilter {
     @Override
     public NextAction handleRead(FilterChainContext ctx) throws IOException {
         NextAction nextAction = super.handleRead(ctx);
-        if (null != nextAction && InvokeAction.TYPE == nextAction.type() && isPauseRequested(ctx)) {
-            savePausedAction(ctx, nextAction);
-            // Instruct filter chain to pause the processing.
-            return ctx.getSuspendAction();
-        } else {
-            // Instruct filter chain to continue the processing.
-            return nextAction;
-        }
+        return pauseIfNeeded(ctx, nextAction);
     }
 
     @Override
