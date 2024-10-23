@@ -1,4 +1,4 @@
-package com.ning.http.client;
+package com.ning.http.client.providers.grizzly;
 
 import org.glassfish.grizzly.filterchain.FilterChainContext;
 

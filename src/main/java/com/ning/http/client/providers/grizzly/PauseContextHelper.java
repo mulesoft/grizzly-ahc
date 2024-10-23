@@ -1,9 +1,17 @@
-package com.ning.http.client;
+package com.ning.http.client.providers.grizzly;
 
 import org.glassfish.grizzly.filterchain.FilterChainContext;
 import org.glassfish.grizzly.filterchain.NextAction;
 
-public final class PauseContextHelper {
+/**
+ * Package-private helper used to pause and resume the event processing of a {@link FilterChainContext}.
+ * Apart from the base suspend/resume mechanism from Grizzly, what this helper offers is
+ * {@link #savePausedAction(FilterChainContext,NextAction) a method} to attach an {@link NextAction action} to the
+ * context, and {@link #resumeFromPausedAction(FilterChainContext) another method} to resume the execution starting
+ * from that attached action.
+ * This class is intended to be used only by {@link AhcEventFilter}.
+ */
+final class PauseContextHelper {
 
     private PauseContextHelper() {
         // private empty constructor to avoid wrong instantiation.

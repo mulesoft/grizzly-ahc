@@ -19,7 +19,7 @@ import java.io.IOException;
 import java.io.OutputStream;
 import java.nio.ByteBuffer;
 
-import org.glassfish.grizzly.filterchain.FilterChainContext;
+import com.ning.http.client.providers.grizzly.PauseHandler;
 
 /**
  * A callback class used when an HTTP response body is received.
@@ -89,5 +89,12 @@ public abstract class HttpResponseBodyPart {
      */
     public abstract ByteBuffer getBodyByteBuffer();
 
+    /**
+     * Retrieves a {@link PauseHandler} to pause/resume event processing. Useful when an {@link AsyncHandler}'s resources are
+     * saturated, and it can't handle the body part temporarily. If the handler uses the {@link PauseHandler#requestPause()}
+     * method, it's also responsible for calling {@link PauseHandler#resume()} when it could handle the part correctly.
+     *
+     * @return a {@link PauseHandler} to pause the events processing in the current http transaction.
+     */
     public abstract PauseHandler getPauseHandler();
 }

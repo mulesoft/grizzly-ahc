@@ -19,7 +19,6 @@ import static com.ning.http.util.AuthenticatorUtils.getHttpHeaderForAuthScheme;
 import static com.ning.http.util.MiscUtils.isNonEmpty;
 import static java.lang.Boolean.FALSE;
 
-import com.ning.http.client.PauseContextHelper;
 import com.ning.http.client.providers.grizzly.events.GracefulCloseEvent;
 import com.ning.http.client.providers.grizzly.websocket.GrizzlyWebSocketAdapter;
 import com.ning.http.client.AsyncHandler;
