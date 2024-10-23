@@ -89,5 +89,5 @@ public abstract class HttpResponseBodyPart {
      */
     public abstract ByteBuffer getBodyByteBuffer();
 
-    public abstract FilterChainContext getContext();
+    public abstract PauseHandler getPauseHandler();
 }

@@ -13,6 +13,7 @@
 
 package com.ning.http.client.providers.grizzly;
 
+import com.ning.http.client.PauseHandler;
 import org.glassfish.grizzly.Buffer;
 import org.glassfish.grizzly.filterchain.FilterChainContext;
 import org.glassfish.grizzly.http.HttpContent;
@@ -113,7 +114,7 @@ public class GrizzlyResponseBodyPart extends HttpResponseBodyPart {
     }
 
     @Override
-    public FilterChainContext getContext() {
-        return context;
+    public PauseHandler getPauseHandler() {
+        return new PauseHandler(context);
     }
 }

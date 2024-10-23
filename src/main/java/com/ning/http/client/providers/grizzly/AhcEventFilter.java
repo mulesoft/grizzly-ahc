@@ -19,7 +19,7 @@ import static com.ning.http.util.AuthenticatorUtils.getHttpHeaderForAuthScheme;
 import static com.ning.http.util.MiscUtils.isNonEmpty;
 import static java.lang.Boolean.FALSE;
 
-import com.ning.http.client.cookie.Cookie;
+import com.ning.http.client.PauseContextHelper;
 import com.ning.http.client.providers.grizzly.events.GracefulCloseEvent;
 import com.ning.http.client.providers.grizzly.websocket.GrizzlyWebSocketAdapter;
 import com.ning.http.client.AsyncHandler;
@@ -48,12 +48,9 @@ import java.util.concurrent.TimeUnit;
 
 import org.glassfish.grizzly.Buffer;
 import org.glassfish.grizzly.Connection;
-import org.glassfish.grizzly.Context;
-import org.glassfish.grizzly.IOEvent;
-import org.glassfish.grizzly.IOEventLifeCycleListener;
-import org.glassfish.grizzly.asyncqueue.AsyncQueue;
 import org.glassfish.grizzly.filterchain.FilterChainContext;
 import org.glassfish.grizzly.filterchain.FilterChainEvent;
+import org.glassfish.grizzly.filterchain.InvokeAction;
 import org.glassfish.grizzly.filterchain.NextAction;
 import org.glassfish.grizzly.http.HttpClientFilter;
 import org.glassfish.grizzly.http.HttpContent;
@@ -107,6 +104,19 @@ final class AhcEventFilter extends HttpClientFilter {
     @Override
     protected void onIncomingUpgrade(final FilterChainContext ctx, final HttpHeader httpHeader) {
         // no-op
+    }
+
+    @Override
+    public NextAction handleRead(FilterChainContext ctx) throws IOException {
+        NextAction nextAction = super.handleRead(ctx);
+        if (nextAction instanceof InvokeAction && PauseContextHelper.isPauseRequested(ctx)) {
+            PauseContextHelper.savePausedAction(ctx, nextAction);
+            // Instruct filter chain to pause the processing.
+            return ctx.getSuspendAction();
+        } else {
+            // Instruct filter chain to continue the processing.
+            return nextAction;
+        }
     }
 
     @Override
