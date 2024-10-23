@@ -35,22 +35,6 @@ final class PauseContextHelper {
     }
 
     /**
-     * A {@link FilterChainContext} has to be paused if {@link #requestPause(FilterChainContext)} was called before, but
-     * {@link #pauseIfNeeded(FilterChainContext, NextAction)} wasn't called yet.
-     * @param ctx the {@link FilterChainContext}.
-     * @return true if the context has to be paused.
-     */
-    public static boolean isPauseRequested(FilterChainContext ctx) {
-        synchronized (ctx) {
-            PauseContext pauseContext = getPauseCtxFromAttribute(ctx);
-            if (null == pauseContext) {
-                return false;
-            }
-            return null == pauseContext.getPausedAction();
-        }
-    }
-
-    /**
      * If the context has to be paused, it attaches the passed pausedAction to the {@link FilterChainContext} so that
      * it can be resumed starting from that action later.
      * @param ctx the {@link FilterChainContext} being paused.

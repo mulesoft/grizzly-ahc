@@ -13,7 +13,6 @@
 package com.ning.http.client.providers.grizzly;
 
 import static com.ning.http.client.Realm.AuthScheme.NTLM;
-import static com.ning.http.client.providers.grizzly.PauseContextHelper.isPauseRequested;
 import static com.ning.http.client.providers.grizzly.PauseContextHelper.pauseIfNeeded;
 import static com.ning.http.util.AsyncHttpProviderUtils.getNTLM;
 import static com.ning.http.util.AsyncHttpProviderUtils.isSameHostAndProtocol;
