@@ -53,6 +53,10 @@ final class PauseContextHelper {
             return pausedAction;
         }
 
+        if (null == getPauseCtxFromAttribute(ctx)) {
+            return pausedAction;
+        }
+
         synchronized (ctx) {
             PauseContext pauseContext = getPauseCtxFromAttribute(ctx);
             if (pauseContext != null && pauseContext.getPausedAction() != null) {
