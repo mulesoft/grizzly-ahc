@@ -17,6 +17,7 @@ import com.ning.http.client.AsyncHttpClientConfig;
 import com.ning.http.client.BodyDeferringAsyncHandler;
 import com.ning.http.client.BodyDeferringAsyncHandler.BodyDeferringInputStream;
 import com.ning.http.client.Response;
+import com.ning.http.util.CountingOutputStream;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.testng.Assert;
@@ -85,21 +86,6 @@ public abstract class BodyDeferringAsyncHandlerTest extends AbstractBasicTest {
         }
     }
 
-    // a /dev/null but counting how many bytes it ditched
-    public static class CountingOutputStream extends OutputStream {
-        private int byteCount = 0;
-
-        @Override
-        public void write(int b) throws IOException {
-            // /dev/null
-            byteCount++;
-        }
-
-        public int getByteCount() {
-            return byteCount;
-        }
-    }
-
     // simple stream copy just to "consume". It closes streams.
     public static void copy(InputStream in, OutputStream out) throws IOException {
         byte[] buf = new byte[1024];
@@ -112,11 +98,12 @@ public abstract class BodyDeferringAsyncHandlerTest extends AbstractBasicTest {
         in.close();
     }
 
+    @Override
     public AbstractHandler configureHandler() throws Exception {
         return new SlowAndBigHandler();
     }
 
-    public AsyncHttpClientConfig getAsyncHttpClientConfig() {
+    private AsyncHttpClientConfig getAsyncHttpClientConfig() {
         // for this test brevity's sake, we are limiting to 1 retries
         return new AsyncHttpClientConfig.Builder().setMaxRequestRetry(0).setRequestTimeout(10000).build();
     }

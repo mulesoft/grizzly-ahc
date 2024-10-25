@@ -13,13 +13,13 @@
 package com.ning.http.client.providers.grizzly;
 
 import static com.ning.http.client.Realm.AuthScheme.NTLM;
+import static com.ning.http.client.providers.grizzly.PauseContextHelper.pauseIfNeeded;
 import static com.ning.http.util.AsyncHttpProviderUtils.getNTLM;
 import static com.ning.http.util.AsyncHttpProviderUtils.isSameHostAndProtocol;
 import static com.ning.http.util.AuthenticatorUtils.getHttpHeaderForAuthScheme;
 import static com.ning.http.util.MiscUtils.isNonEmpty;
 import static java.lang.Boolean.FALSE;
 
-import com.ning.http.client.cookie.Cookie;
 import com.ning.http.client.providers.grizzly.events.GracefulCloseEvent;
 import com.ning.http.client.providers.grizzly.websocket.GrizzlyWebSocketAdapter;
 import com.ning.http.client.AsyncHandler;
@@ -50,6 +50,7 @@ import org.glassfish.grizzly.Buffer;
 import org.glassfish.grizzly.Connection;
 import org.glassfish.grizzly.filterchain.FilterChainContext;
 import org.glassfish.grizzly.filterchain.FilterChainEvent;
+import org.glassfish.grizzly.filterchain.InvokeAction;
 import org.glassfish.grizzly.filterchain.NextAction;
 import org.glassfish.grizzly.http.HttpClientFilter;
 import org.glassfish.grizzly.http.HttpContent;
@@ -106,6 +107,12 @@ final class AhcEventFilter extends HttpClientFilter {
     }
 
     @Override
+    public NextAction handleRead(FilterChainContext ctx) throws IOException {
+        NextAction nextAction = super.handleRead(ctx);
+        return pauseIfNeeded(ctx, nextAction);
+    }
+
+    @Override
     public NextAction handleEvent(final FilterChainContext ctx,
             final FilterChainEvent event) throws IOException {
         
@@ -139,8 +146,7 @@ final class AhcEventFilter extends HttpClientFilter {
         final AsyncHandler handler = context.getAsyncHandler();
         if (handler != null && context.currentState != AsyncHandler.STATE.ABORT) {
             try {
-                context.currentState = handler.onBodyPartReceived(
-                        new GrizzlyResponseBodyPart(content, ctx.getConnection()));
+                context.currentState = handler.onBodyPartReceived(new GrizzlyResponseBodyPart(content, ctx));
             } catch (Exception e) {
                 handler.onThrowable(e);
             }

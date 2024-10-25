@@ -15,6 +15,7 @@ package com.ning.http.client.providers.grizzly;
 
 import org.glassfish.grizzly.Buffer;
 import org.glassfish.grizzly.Connection;
+import org.glassfish.grizzly.filterchain.FilterChainContext;
 import org.glassfish.grizzly.http.HttpContent;
 
 import com.ning.http.client.HttpResponseBodyPart;
@@ -35,7 +36,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class GrizzlyResponseBodyPart extends HttpResponseBodyPart {
 
     private final HttpContent content;
-    private final Connection connection;
+    private final FilterChainContext context;
     private final AtomicReference<byte[]> contentBytes =
             new AtomicReference<byte[]>();
 
@@ -44,11 +45,19 @@ public class GrizzlyResponseBodyPart extends HttpResponseBodyPart {
 
 
     public GrizzlyResponseBodyPart(final HttpContent content,
+                                   final FilterChainContext context) {
+        super(false);
+        this.content = content;
+        this.context = context;
+    }
+
+    // Deprecated: Use GrizzlyResponseBodyPart(final HttpContent content, final FilterChainContext context) instead.
+    @Deprecated
+    public GrizzlyResponseBodyPart(final HttpContent content,
                                    final Connection connection) {
         super(false);
         this.content = content;
-        this.connection = connection;
-
+        this.context = null;
     }
 
 
@@ -57,7 +66,6 @@ public class GrizzlyResponseBodyPart extends HttpResponseBodyPart {
 
     @Override
     public byte[] getBodyPartBytes() {
-
         byte[] bytes = contentBytes.get();
         if (bytes != null) {
             return bytes;
@@ -76,19 +84,15 @@ public class GrizzlyResponseBodyPart extends HttpResponseBodyPart {
 
     @Override
     public int writeTo(OutputStream outputStream) throws IOException {
-
         final byte[] bytes = getBodyPartBytes();
         outputStream.write(getBodyPartBytes());
         return bytes.length;
-
     }
 
 
     @Override
     public ByteBuffer getBodyByteBuffer() {
-
         return ByteBuffer.wrap(getBodyPartBytes());
-
     }
 
     @Override
@@ -110,13 +114,16 @@ public class GrizzlyResponseBodyPart extends HttpResponseBodyPart {
 
 
     Buffer getBodyBuffer() {
-
         return content.getContent();
-
     }
 
     @Override
     public int length() {
         return content.getContent().remaining();
+    }
+
+    @Override
+    public PauseHandler getPauseHandler() {
+        return new PauseHandler(context);
     }
 }
