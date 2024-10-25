@@ -59,14 +59,15 @@ final class PauseContextHelper {
 
         synchronized (ctx) {
             PauseContext pauseContext = getPauseCtxFromAttribute(ctx);
-            if (pauseContext != null && pauseContext.getPausedAction() != null) {
-                throw new IllegalStateException("Can't override a paused action");
-            }
-
             if (pauseContext == null) {
                 // it was resumed before this method could be executed
                 return pausedAction;
             }
+            
+            if (pauseContext.getPausedAction() != null) {
+                throw new IllegalStateException("Can't override a paused action");
+            }
+
 
             setPauseCtxAttribute(ctx, new PauseContext(pausedAction));
             return ctx.getSuspendAction();
