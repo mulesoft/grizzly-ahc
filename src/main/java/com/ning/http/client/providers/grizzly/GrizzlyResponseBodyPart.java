@@ -14,6 +14,7 @@
 package com.ning.http.client.providers.grizzly;
 
 import org.glassfish.grizzly.Buffer;
+import org.glassfish.grizzly.Connection;
 import org.glassfish.grizzly.filterchain.FilterChainContext;
 import org.glassfish.grizzly.http.HttpContent;
 
@@ -48,6 +49,15 @@ public class GrizzlyResponseBodyPart extends HttpResponseBodyPart {
         super(false);
         this.content = content;
         this.context = context;
+    }
+
+    // Deprecated: Use GrizzlyResponseBodyPart(final HttpContent content, final FilterChainContext context) instead.
+    @Deprecated
+    public GrizzlyResponseBodyPart(final HttpContent content,
+                                   final Connection connection) {
+        super(false);
+        this.content = content;
+        this.context = null;
     }
 
 

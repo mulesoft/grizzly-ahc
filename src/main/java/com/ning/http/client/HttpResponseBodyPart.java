@@ -96,5 +96,7 @@ public abstract class HttpResponseBodyPart {
      *
      * @return a {@link PauseHandler} to pause the events processing in the current http transaction.
      */
-    public abstract PauseHandler getPauseHandler();
+    public PauseHandler getPauseHandler() {
+        throw new UnsupportedOperationException("The class " + this.getClass() + " doesn't implement getPauseHandler");
+    }
 }
