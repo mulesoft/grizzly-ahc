@@ -37,6 +37,7 @@ import com.ning.http.client.HttpResponseHeaders;
 import com.ning.http.client.HttpResponseStatus;
 import com.ning.http.client.Response;
 import com.ning.http.client.providers.grizzly.PauseHandler;
+import com.ning.http.util.CountingOutputStream;
 import org.eclipse.jetty.server.Request;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.testng.Assert;
@@ -47,7 +48,7 @@ public abstract class PauseAsyncHandlerTest extends AbstractBasicTest {
     private static final int NUMBER_OF_CHUNKS = 5;
     private static final String CHUNK_CONTENT = "This is a chunk";
 
-    public static class SlowChunkedHandler extends AbstractHandler {
+    private static class SlowChunkedHandler extends AbstractHandler {
 
         public void handle(String pathInContext, Request request, HttpServletRequest httpRequest, HttpServletResponse httpResponse) throws IOException, ServletException {
             httpResponse.setStatus(200);
@@ -87,25 +88,12 @@ public abstract class PauseAsyncHandlerTest extends AbstractBasicTest {
         }
     }
 
-    // a /dev/null but counting how many bytes it received
-    public static class CountingOutputStream extends OutputStream {
-        private int byteCount = 0;
-
-        @Override
-        public void write(int b) throws IOException {
-            byteCount++;
-        }
-
-        public int getByteCount() {
-            return byteCount;
-        }
-    }
-
+    @Override
     public AbstractHandler configureHandler() throws Exception {
         return new SlowChunkedHandler();
     }
 
-    public AsyncHttpClientConfig getAsyncHttpClientConfig() {
+    private AsyncHttpClientConfig getAsyncHttpClientConfig() {
         return new AsyncHttpClientConfig.Builder().setMaxRequestRetry(0).setRequestTimeout(10000).build();
     }
 
