@@ -12,6 +12,9 @@
  */
 package com.ning.http.client.providers.grizzly;
 
+import static com.ning.http.client.Realm.AuthScheme.NTLM;
+import static com.ning.http.client.providers.grizzly.Utils.isNtlmEstablished;
+
 import com.ning.http.client.AsyncHandler;
 import com.ning.http.client.AsyncHttpClientConfig;
 import com.ning.http.client.FluentCaseInsensitiveStringsMap;
@@ -74,6 +77,9 @@ final class AsyncHttpClientFilter extends BaseFilter {
     
     private static final HeaderValue KEEP_ALIVE_VALUE = HeaderValue.newHeaderValue("keep-alive");
     private static final HeaderValue CLOSE_VALUE = HeaderValue.newHeaderValue("close");
+
+    // TODO: W-17216089 - Remove this kill switch once confident enough
+    private static final boolean NTLM_FORCE_SEND_PAYLOAD_ON_TYPE1 = Boolean.getBoolean("mule.ntlm.force.send.payload.on.type1");
 
     private final AsyncHttpClientConfig config;
 
@@ -151,8 +157,13 @@ final class AsyncHttpClientFilter extends BaseFilter {
                    .query(uri.getQuery());
         }
 
+        // check if it is a type 1 NTLM message, so we can avoid sending a payload that will be ignored
+        final Realm realm = getRealm(ahcRequest);
+        final boolean emptyPayloadOverride = isNTLMType1Message(realm, connection, isUsedConnection)
+          && !NTLM_FORCE_SEND_PAYLOAD_ON_TYPE1;
+
         HttpRequestPacket requestPacket;
-        final PayloadGenerator payloadGenerator = isPayloadAllowed(method)
+        final PayloadGenerator payloadGenerator = isPayloadAllowed(method) && !emptyPayloadOverride
                 ? PayloadGenFactory.getPayloadGenerator(ahcRequest)
                 : null;
         
@@ -164,7 +175,11 @@ final class AsyncHttpClientFilter extends BaseFilter {
             } else {
                 builder.chunked(true);
             }
+        } else if (emptyPayloadOverride) {
+            // otherwise it would be -1 (i.e.: unknown)
+            builder.contentLength(0);
         }
+
         if (httpTxCtx.isWSRequest) {
             try {
                 final URI wsURI = httpTxCtx.wsRequestURI.toJavaNetURI();
@@ -188,7 +203,6 @@ final class AsyncHttpClientFilter extends BaseFilter {
         addServiceHeaders(requestPacket);
         addAcceptHeaders(requestPacket);
         
-        final Realm realm = getRealm(ahcRequest);
         addAuthorizationHeader(ahcRequest, requestPacket, realm,
                 uri, proxy, isUsedConnection);
         
@@ -300,6 +314,15 @@ final class AsyncHttpClientFilter extends BaseFilter {
 
     private boolean isPayloadAllowed(final Method method) {
         return method.getPayloadExpectation() != Method.PayloadExpectation.NOT_ALLOWED;
+    }
+
+    private boolean isNTLMType1Message(final Realm realm,
+                                       final Connection<?> connection,
+                                       final boolean isUsedConnection) {
+        return realm != null
+          && NTLM.equals(realm.getScheme())
+          && !isNtlmEstablished(connection)
+          && (isUsedConnection || realm.getUsePreemptiveAuth());
     }
 
     private void addAuthorizationHeader(final Request req,

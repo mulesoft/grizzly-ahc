@@ -45,7 +45,6 @@ import javax.servlet.http.HttpServletResponse;
 import org.eclipse.jetty.server.handler.AbstractHandler;
 import org.eclipse.jetty.server.handler.HandlerWrapper;
 import org.slf4j.Logger;
-import org.testng.Assert;
 import org.testng.annotations.BeforeMethod;
 import org.testng.annotations.Test;
 
@@ -58,6 +57,12 @@ public abstract class NTLMTest extends AbstractBasicTest {
     private AsyncHttpClient client;
 
     public static class NTLMHandler extends HandlerWrapper {
+
+        private final boolean ntlmForceSendPayloadOnType1;
+
+        public NTLMHandler(boolean ntlmForceSendPayloadOnType1) {
+            this.ntlmForceSendPayloadOnType1 = ntlmForceSendPayloadOnType1;
+        }
 
         @Override
         public void handle(String pathInContext, org.eclipse.jetty.server.Request request, HttpServletRequest httpRequest,
@@ -80,12 +85,27 @@ public abstract class NTLMTest extends AbstractBasicTest {
                 // - Sends the supported authentication protocols
                 httpResponse.setStatus(401);
                 httpResponse.setHeader("WWW-Authenticate", "NTLM");
+                if (request.getMethod().equals(POST.asString())) {
+                    // Make sure the body is received in this case, because it was not a type 1 and the client must assume NTLM is
+                    // not necessarily required, or the authentication has already been done for the connection
+                    assertEquals(new String(toByteArray(httpRequest.getInputStream())), PAYLOAD);
+                }
             } else if (authorization.equals("NTLM TlRMTVNTUAABAAAAAYIIogAAAAAoAAAAAAAAACgAAAAFASgKAAAADw==")) {
-                // Second step:
+                // Second step (First if preemptive):
                 // - Authorization header contains user-password
                 // - Set the challenge
                 httpResponse.setStatus(401);
                 httpResponse.setHeader("WWW-Authenticate", "NTLM TlRMTVNTUAACAAAAAAAAACgAAAABggAAU3J2Tm9uY2UAAAAAAAAAAA==");
+
+                // Type 1 messages, preemptive or not, should not contain body because it will be ignored anyway
+                if (request.getMethod().equals(POST.asString())) {
+                    if (ntlmForceSendPayloadOnType1) {
+                        // Make sure the body is received in this case because the kill switch is enabled
+                        assertEquals(new String(toByteArray(httpRequest.getInputStream())), PAYLOAD);
+                    } else {
+                        assertEquals(httpRequest.getContentLength(), 0, "Type 1 message should not contain body");
+                    }
+                }
             } else if (authorization.equals("NTLM TlRMTVNTUAADAAAAGAAYAEgAAAAYABgAYAAAABQAFAB4AAAADAAMAIwAAAASABIAmAAAAAAAAACqAAAAAYIAAgUBKAoAAAAPrYfKbe/jRoW5xDxHeoxC1gBmfWiS5+iX4OAN4xBKG/IFPwfH3agtPEia6YnhsADTVQBSAFMAQQAtAE0ASQBOAE8AUgBaAGEAcABoAG8AZABMAGkAZwBoAHQAQwBpAHQAeQA=")) {
                 // Third step:
                 // - Receive the correct response to the challenge
@@ -106,7 +126,7 @@ public abstract class NTLMTest extends AbstractBasicTest {
 
     @Override
     public AbstractHandler configureHandler() throws Exception {
-        return new NTLMHandler();
+        return new NTLMHandler(false);
     }
 
     private RealmBuilder realmBuilderBase() {
@@ -118,19 +138,22 @@ public abstract class NTLMTest extends AbstractBasicTest {
                 .setPassword("Beeblebrox");
     }
 
-    private void ntlmAuthWithGetTest(RealmBuilder realmBuilder) throws IOException, InterruptedException, ExecutionException {
+    private void ntlmAuthWithGetTest(RealmBuilder realmBuilder, int numReqs) throws IOException, InterruptedException, ExecutionException {
   
       AsyncHttpClientConfig config = new AsyncHttpClientConfig.Builder().setRealm(realmBuilder.build()).build();
   
       try (AsyncHttpClient client = getAsyncHttpClient(config)) {
         Request request = new RequestBuilder(GET.asString()).setUrl(getTargetUrl()).build();
-        Future<Response> responseFuture = client.executeRequest(request);
-        int status = responseFuture.get().getStatusCode();
-        assertEquals(status, 200);
+
+        for (int i = 0; i < numReqs; i++) {
+            Future<Response> responseFuture = client.executeRequest(request);
+            int status = responseFuture.get().getStatusCode();
+            assertEquals(status, 200);
+        }
       }
     }
     
-    private void ntlmAuthTestWithPost(RealmBuilder realmBuilder) throws IOException, InterruptedException, ExecutionException {
+    private void ntlmAuthTestWithPost(RealmBuilder realmBuilder, int numReqs) throws IOException, InterruptedException, ExecutionException {
 
         AsyncHttpClientConfig config = new AsyncHttpClientConfig.Builder().setRealm(realmBuilder.build()).setFollowRedirect(true).build();
 
@@ -138,10 +161,12 @@ public abstract class NTLMTest extends AbstractBasicTest {
           ByteArrayInputStream body = new ByteArrayInputStream(PAYLOAD.getBytes());
           Request request = new RequestBuilder(POST.asString()).setBody(new InputStreamBodyGenerator(body)).setUrl(getTargetUrl())
               .setBody("PAYLOAD").build();
-            
-            Future<Response> responseFuture = client.executeRequest(request);
-            int status = responseFuture.get().getStatusCode();
-            assertEquals(status, 200);
+
+          for (int i = 0; i < numReqs; i++) {
+              Future<Response> responseFuture = client.executeRequest(request);
+              int status = responseFuture.get().getStatusCode();
+              assertEquals(status, 200);
+          }
         }
     }
 
@@ -162,22 +187,42 @@ public abstract class NTLMTest extends AbstractBasicTest {
 
     @Test
     public void lazyNTLMAuthPostTest() throws IOException, InterruptedException, ExecutionException {
-      ntlmAuthTestWithPost(realmBuilderBase());
+      ntlmAuthTestWithPost(realmBuilderBase(), 1);
     }
 
     @Test
     public void preemptiveNTLMAuthPostTest() throws IOException, InterruptedException, ExecutionException {
-      ntlmAuthTestWithPost(realmBuilderBase().setUsePreemptiveAuth(true));
+      ntlmAuthTestWithPost(realmBuilderBase().setUsePreemptiveAuth(true), 1);
+    }
+
+    @Test
+    public void lazyNTLMAuthMultiplePostTest() throws IOException, InterruptedException, ExecutionException {
+        ntlmAuthTestWithPost(realmBuilderBase(), 3);
+    }
+
+    @Test
+    public void preemptiveNTLMAuthMultiplePostTest() throws IOException, InterruptedException, ExecutionException {
+        ntlmAuthTestWithPost(realmBuilderBase().setUsePreemptiveAuth(true), 3);
     }
     
     @Test
     public void lazyNTLMAuthGetTest() throws IOException, InterruptedException, ExecutionException {
-      ntlmAuthWithGetTest(realmBuilderBase());
+      ntlmAuthWithGetTest(realmBuilderBase(), 1);
     }
 
     @Test
     public void preemptiveNTLMAuthGetTest() throws IOException, InterruptedException, ExecutionException {
-      ntlmAuthWithGetTest(realmBuilderBase().setUsePreemptiveAuth(true));
+      ntlmAuthWithGetTest(realmBuilderBase().setUsePreemptiveAuth(true), 1);
+    }
+
+    @Test
+    public void lazyNTLMAuthMultipleGetTest() throws IOException, InterruptedException, ExecutionException {
+        ntlmAuthWithGetTest(realmBuilderBase(), 3);
+    }
+
+    @Test
+    public void preemptiveNTLMAuthMultipleGetTest() throws IOException, InterruptedException, ExecutionException {
+        ntlmAuthWithGetTest(realmBuilderBase().setUsePreemptiveAuth(true), 3);
     }
 
     @Test
