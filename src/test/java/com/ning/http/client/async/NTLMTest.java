@@ -159,8 +159,11 @@ public abstract class NTLMTest extends AbstractBasicTest {
 
         try (AsyncHttpClient client = getAsyncHttpClient(config)) {
           ByteArrayInputStream body = new ByteArrayInputStream(PAYLOAD.getBytes());
-          Request request = new RequestBuilder(POST.asString()).setBody(new InputStreamBodyGenerator(body)).setUrl(getTargetUrl())
-              .setBody("PAYLOAD").build();
+          Request request = new RequestBuilder(POST.asString())
+            .addHeader("Content-Length", String.valueOf(PAYLOAD.length()))
+            .setBody(new InputStreamBodyGenerator(body))
+            .setUrl(getTargetUrl())
+            .build();
 
           for (int i = 0; i < numReqs; i++) {
               Future<Response> responseFuture = client.executeRequest(request);

@@ -175,9 +175,6 @@ final class AsyncHttpClientFilter extends BaseFilter {
             } else {
                 builder.chunked(true);
             }
-        } else if (emptyPayloadOverride) {
-            // otherwise it would be -1 (i.e.: unknown)
-            builder.contentLength(0);
         }
 
         if (httpTxCtx.isWSRequest) {
@@ -213,6 +210,11 @@ final class AsyncHttpClientFilter extends BaseFilter {
 
         ctx.notifyDownstream(new SSLSwitchingEvent(connection, secure,
                 uri.getHost(), uri.getPort()));
+
+        if (emptyPayloadOverride && requestPacket.containsHeader("Content-Length")) {
+            // Makes sure the header is also overridden if set
+            requestPacket.setHeader("Content-Length", "0");
+        }
 
        final boolean isFullySent = sendRequest(httpTxCtx, ctx, requestPacket,
                 wrapWithExpectHandlerIfNeeded(payloadGenerator, requestPacket));
