@@ -211,8 +211,8 @@ final class AsyncHttpClientFilter extends BaseFilter {
         ctx.notifyDownstream(new SSLSwitchingEvent(connection, secure,
                 uri.getHost(), uri.getPort()));
 
-        if (emptyPayloadOverride && requestPacket.containsHeader("Content-Length")) {
-            // Makes sure the header is also overridden if set
+        if (emptyPayloadOverride) {
+            // Makes sure the header is always set to 0
             requestPacket.setHeader("Content-Length", "0");
         }
 
