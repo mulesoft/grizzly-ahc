@@ -153,14 +153,20 @@ public abstract class NTLMTest extends AbstractBasicTest {
       }
     }
     
-    private void ntlmAuthTestWithPost(RealmBuilder realmBuilder, int numReqs) throws IOException, InterruptedException, ExecutionException {
+    private void ntlmAuthTestWithPost(RealmBuilder realmBuilder, int numReqs, boolean setContentLength) throws IOException, InterruptedException, ExecutionException {
 
         AsyncHttpClientConfig config = new AsyncHttpClientConfig.Builder().setRealm(realmBuilder.build()).setFollowRedirect(true).build();
 
         try (AsyncHttpClient client = getAsyncHttpClient(config)) {
           ByteArrayInputStream body = new ByteArrayInputStream(PAYLOAD.getBytes());
-          Request request = new RequestBuilder(POST.asString()).setBody(new InputStreamBodyGenerator(body)).setUrl(getTargetUrl())
-              .setBody("PAYLOAD").build();
+          RequestBuilder requestBuilder = new RequestBuilder(POST.asString())
+            .setBody(new InputStreamBodyGenerator(body))
+            .setUrl(getTargetUrl());
+          if (setContentLength) {
+              requestBuilder.addHeader("Content-Length", String.valueOf(PAYLOAD.length()));
+          }
+
+          Request request = requestBuilder.build();
 
           for (int i = 0; i < numReqs; i++) {
               Future<Response> responseFuture = client.executeRequest(request);
@@ -187,22 +193,42 @@ public abstract class NTLMTest extends AbstractBasicTest {
 
     @Test
     public void lazyNTLMAuthPostTest() throws IOException, InterruptedException, ExecutionException {
-      ntlmAuthTestWithPost(realmBuilderBase(), 1);
+      ntlmAuthTestWithPost(realmBuilderBase(), 1, false);
     }
 
     @Test
     public void preemptiveNTLMAuthPostTest() throws IOException, InterruptedException, ExecutionException {
-      ntlmAuthTestWithPost(realmBuilderBase().setUsePreemptiveAuth(true), 1);
+      ntlmAuthTestWithPost(realmBuilderBase().setUsePreemptiveAuth(true), 1, false);
     }
 
     @Test
     public void lazyNTLMAuthMultiplePostTest() throws IOException, InterruptedException, ExecutionException {
-        ntlmAuthTestWithPost(realmBuilderBase(), 3);
+        ntlmAuthTestWithPost(realmBuilderBase(), 3, false);
     }
 
     @Test
     public void preemptiveNTLMAuthMultiplePostTest() throws IOException, InterruptedException, ExecutionException {
-        ntlmAuthTestWithPost(realmBuilderBase().setUsePreemptiveAuth(true), 3);
+        ntlmAuthTestWithPost(realmBuilderBase().setUsePreemptiveAuth(true), 3, false);
+    }
+
+    @Test
+    public void lazyNTLMAuthPostWithContentLengthTest() throws IOException, InterruptedException, ExecutionException {
+        ntlmAuthTestWithPost(realmBuilderBase(), 1, true);
+    }
+
+    @Test
+    public void preemptiveNTLMAuthPostWithContentLengthTest() throws IOException, InterruptedException, ExecutionException {
+        ntlmAuthTestWithPost(realmBuilderBase().setUsePreemptiveAuth(true), 1, true);
+    }
+
+    @Test
+    public void lazyNTLMAuthMultiplePostWithContentLengthTest() throws IOException, InterruptedException, ExecutionException {
+        ntlmAuthTestWithPost(realmBuilderBase(), 3, true);
+    }
+
+    @Test
+    public void preemptiveNTLMAuthMultiplePostWithContentLengthTest() throws IOException, InterruptedException, ExecutionException {
+        ntlmAuthTestWithPost(realmBuilderBase().setUsePreemptiveAuth(true), 3, true);
     }
     
     @Test
