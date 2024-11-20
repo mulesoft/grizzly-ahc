@@ -31,8 +31,9 @@ package com.ning.http.client.listenable;
 import java.util.Queue;
 import java.util.concurrent.Executor;
 import java.util.concurrent.LinkedBlockingQueue;
-import java.util.logging.Level;
-import java.util.logging.Logger;
+
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 
 /**
  * <p>A list of ({@code Runnable}, {@code Executor}) pairs that guarantees
@@ -48,8 +49,7 @@ import java.util.logging.Logger;
 public final class ExecutionList implements Runnable {
 
     // Logger to log exceptions caught when running runnables.
-    private static final Logger log =
-            Logger.getLogger(ExecutionList.class.getName());
+    private final static Logger LOGGER = LoggerFactory.getLogger(ExecutionList.class);
 
     // The runnable,executor pairs to execute.
     private final Queue<RunnableExecutorPair> runnables = new LinkedBlockingQueue<>();
@@ -130,8 +130,7 @@ public final class ExecutionList implements Runnable {
                 // Log it and keep going, bad runnable and/or executor.  Don't
                 // punish the other runnables if we're given a bad one.  We only
                 // catch RuntimeException because we want Errors to propagate up.
-                log.log(Level.SEVERE, "RuntimeException while executing runnable "
-                        + runnable + " with executor " + executor, e);
+                LOGGER.error("RuntimeException while executing runnable {} with executor {}", runnable, executor, e);
             }
         }
     }
