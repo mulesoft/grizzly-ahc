@@ -84,6 +84,7 @@ public class AsyncHttpClientConfig {
     protected AsyncHttpProviderConfig<?, ?> providerConfig;
 
     protected int maxRequestHeaders;
+    protected boolean ntlmAvoidSendPayloadOnType1;
 
     protected AsyncHttpClientConfig() {
     }
@@ -121,7 +122,8 @@ public class AsyncHttpClientConfig {
             Integer sslSessionCacheSize,//
             Integer sslSessionTimeout,//
             AsyncHttpProviderConfig<?, ?> providerConfig,//
-            int maxRequestHeaders) {
+            int maxRequestHeaders,//
+            boolean ntlmAvoidSendPayloadOnType1) {
 
         this.connectTimeout = connectTimeout;
         this.maxConnections = maxConnections;
@@ -157,6 +159,7 @@ public class AsyncHttpClientConfig {
         this.sslSessionTimeout = sslSessionTimeout;
         this.providerConfig = providerConfig;
         this.maxRequestHeaders = maxRequestHeaders;
+        this.ntlmAvoidSendPayloadOnType1 = ntlmAvoidSendPayloadOnType1;
     }
 
     /**
@@ -490,6 +493,13 @@ public class AsyncHttpClientConfig {
     }
 
     /**
+     * since 1.14-MULE-029
+     */
+    public boolean getNtlmAvoidSendPayloadOnType1() {
+        return ntlmAvoidSendPayloadOnType1;
+    }
+
+    /**
      * Builder for an {@link AsyncHttpClient}
      */
     public static class Builder {
@@ -529,6 +539,7 @@ public class AsyncHttpClientConfig {
         private Integer sslSessionTimeout = defaultSslSessionTimeout();
         private AsyncHttpProviderConfig<?, ?> providerConfig;
         private int maxRequestHeaders = defaultMaxRequestHeaders();
+        private boolean ntlmAvoidSendPayloadOnType1 = defaultNtlmAvoidSendPayloadOnType1();
 
         public Builder() {
         }
@@ -955,6 +966,11 @@ public class AsyncHttpClientConfig {
             return this;
         }
 
+        public Builder setNtlmAvoidSendPayloadOnType1(boolean ntlmAvoidSendPayloadOnType1) {
+            this.ntlmAvoidSendPayloadOnType1 = ntlmAvoidSendPayloadOnType1;
+            return this;
+        }
+
         /**
          * Create a config builder with values taken from the given prototype configuration.
          *
@@ -999,6 +1015,7 @@ public class AsyncHttpClientConfig {
             sslSessionTimeout = prototype.sslSessionTimeout;
             acceptAnyCertificate = prototype.acceptAnyCertificate;
             maxRequestHeaders = prototype.maxRequestHeaders;
+            ntlmAvoidSendPayloadOnType1 = prototype.ntlmAvoidSendPayloadOnType1;
         }
 
         /**
@@ -1062,7 +1079,8 @@ public class AsyncHttpClientConfig {
                     sslSessionCacheSize, //
                     sslSessionTimeout, //
                     providerConfig, //
-                    maxRequestHeaders);
+                    maxRequestHeaders, //
+                    ntlmAvoidSendPayloadOnType1);
         }
     }
 }

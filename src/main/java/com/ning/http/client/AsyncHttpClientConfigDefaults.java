@@ -125,4 +125,9 @@ public final class AsyncHttpClientConfigDefaults {
     public static int defaultMaxRequestHeaders() {
         return MAX_NUM_HEADERS_DEFAULT;
     }
+
+    public static boolean defaultNtlmAvoidSendPayloadOnType1() {
+        // There is also a feature flag that overrides this in Mule
+        return Boolean.getBoolean(ASYNC_CLIENT + "ntlm.avoid.send.payload.on.type1");
+    }
 }

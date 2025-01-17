@@ -58,10 +58,10 @@ public abstract class NTLMTest extends AbstractBasicTest {
 
     public static class NTLMHandler extends HandlerWrapper {
 
-        private final boolean ntlmForceSendPayloadOnType1;
+        private final boolean ntlmAvoidSendPayloadOnType1;
 
-        public NTLMHandler(boolean ntlmForceSendPayloadOnType1) {
-            this.ntlmForceSendPayloadOnType1 = ntlmForceSendPayloadOnType1;
+        public NTLMHandler(boolean ntlmAvoidSendPayloadOnType1) {
+            this.ntlmAvoidSendPayloadOnType1 = ntlmAvoidSendPayloadOnType1;
         }
 
         @Override
@@ -99,11 +99,11 @@ public abstract class NTLMTest extends AbstractBasicTest {
 
                 // Type 1 messages, preemptive or not, should not contain body because it will be ignored anyway
                 if (request.getMethod().equals(POST.asString())) {
-                    if (ntlmForceSendPayloadOnType1) {
-                        // Make sure the body is received in this case because the kill switch is enabled
-                        assertEquals(new String(toByteArray(httpRequest.getInputStream())), PAYLOAD);
-                    } else {
+                    if (ntlmAvoidSendPayloadOnType1) {
                         assertEquals(httpRequest.getContentLength(), 0, "Type 1 message should not contain body");
+                    } else {
+                        // Make sure the body is received in this case because the feature is disabled
+                        assertEquals(new String(toByteArray(httpRequest.getInputStream())), PAYLOAD);
                     }
                 }
             } else if (authorization.equals("NTLM TlRMTVNTUAADAAAAGAAYAEgAAAAYABgAYAAAABQAFAB4AAAADAAMAIwAAAASABIAmAAAAAAAAACqAAAAAYIAAgUBKAoAAAAPrYfKbe/jRoW5xDxHeoxC1gBmfWiS5+iX4OAN4xBKG/IFPwfH3agtPEia6YnhsADTVQBSAFMAQQAtAE0ASQBOAE8AUgBaAGEAcABoAG8AZABMAGkAZwBoAHQAQwBpAHQAeQA=")) {
@@ -140,7 +140,7 @@ public abstract class NTLMTest extends AbstractBasicTest {
 
     private void ntlmAuthWithGetTest(RealmBuilder realmBuilder, int numReqs) throws IOException, InterruptedException, ExecutionException {
   
-      AsyncHttpClientConfig config = new AsyncHttpClientConfig.Builder().setRealm(realmBuilder.build()).build();
+      AsyncHttpClientConfig config = configureClient(new AsyncHttpClientConfig.Builder()).setRealm(realmBuilder.build()).build();
   
       try (AsyncHttpClient client = getAsyncHttpClient(config)) {
         Request request = new RequestBuilder(GET.asString()).setUrl(getTargetUrl()).build();
@@ -155,7 +155,7 @@ public abstract class NTLMTest extends AbstractBasicTest {
     
     private void ntlmAuthTestWithPost(RealmBuilder realmBuilder, int numReqs, boolean setContentLength) throws IOException, InterruptedException, ExecutionException {
 
-        AsyncHttpClientConfig config = new AsyncHttpClientConfig.Builder().setRealm(realmBuilder.build()).setFollowRedirect(true).build();
+        AsyncHttpClientConfig config = configureClient(new AsyncHttpClientConfig.Builder()).setRealm(realmBuilder.build()).setFollowRedirect(true).build();
 
         try (AsyncHttpClient client = getAsyncHttpClient(config)) {
           ByteArrayInputStream body = new ByteArrayInputStream(PAYLOAD.getBytes());
@@ -254,7 +254,7 @@ public abstract class NTLMTest extends AbstractBasicTest {
     @Test
     public void ntlmCustomConnectionManagementOnEachCredentialsSet() throws Exception {
         // Build client to be used
-        AsyncHttpClientConfig config = new AsyncHttpClientConfig.Builder().build();
+        AsyncHttpClientConfig config = configureClient(new AsyncHttpClientConfig.Builder()).build();
         client = getAsyncHttpClient(config);
 
         // Make good request
@@ -274,7 +274,7 @@ public abstract class NTLMTest extends AbstractBasicTest {
     @Test
     public void renegotiateNTLMCredentials() throws Exception {
         // Build client to be used
-        AsyncHttpClientConfig config = new AsyncHttpClientConfig.Builder().build();
+        AsyncHttpClientConfig config = configureClient(new AsyncHttpClientConfig.Builder()).build();
         client = getAsyncHttpClient(config);
 
         // Make good request
@@ -308,5 +308,10 @@ public abstract class NTLMTest extends AbstractBasicTest {
         // credentials set, a new connection will be created and managed from that moment on.
         assertEquals(seenClients.size(), 2);
         assertEquals(authenticatedClients.size(), 1);
+    }
+
+    protected AsyncHttpClientConfig.Builder configureClient(AsyncHttpClientConfig.Builder builder) {
+        // Does nothing, allows for override in subclasses
+        return builder;
     }
 }
