@@ -78,9 +78,6 @@ final class AsyncHttpClientFilter extends BaseFilter {
     private static final HeaderValue KEEP_ALIVE_VALUE = HeaderValue.newHeaderValue("keep-alive");
     private static final HeaderValue CLOSE_VALUE = HeaderValue.newHeaderValue("close");
 
-    // TODO: W-17216089 - Remove this kill switch once confident enough
-    private static final boolean NTLM_FORCE_SEND_PAYLOAD_ON_TYPE1 = Boolean.getBoolean("mule.ntlm.force.send.payload.on.type1");
-
     private final AsyncHttpClientConfig config;
 
     // -------------------------------------------------------- Constructors
@@ -160,7 +157,7 @@ final class AsyncHttpClientFilter extends BaseFilter {
         // check if it is a type 1 NTLM message, so we can avoid sending a payload that will be ignored
         final Realm realm = getRealm(ahcRequest);
         final boolean emptyPayloadOverride = isNTLMType1Message(realm, connection, isUsedConnection)
-          && !NTLM_FORCE_SEND_PAYLOAD_ON_TYPE1;
+          && config.getNtlmAvoidSendPayloadOnType1();
 
         HttpRequestPacket requestPacket;
         final PayloadGenerator payloadGenerator = isPayloadAllowed(method) && !emptyPayloadOverride

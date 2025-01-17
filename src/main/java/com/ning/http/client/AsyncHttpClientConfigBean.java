@@ -68,6 +68,7 @@ public class AsyncHttpClientConfigBean extends AsyncHttpClientConfig {
         sslSessionCacheSize = defaultSslSessionCacheSize();
         sslSessionTimeout = defaultSslSessionTimeout();
         maxRequestHeaders = defaultMaxRequestHeaders();
+        ntlmAvoidSendPayloadOnType1 = defaultNtlmAvoidSendPayloadOnType1();
 
         if (defaultUseProxySelector()) {
             proxyServerSelector = ProxyUtils.getJdkDefaultProxyServerSelector();
