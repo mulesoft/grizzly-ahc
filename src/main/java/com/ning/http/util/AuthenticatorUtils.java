@@ -48,15 +48,26 @@ public final class AuthenticatorUtils {
             case KERBEROS:
             case SPNEGO:
                 String host;
-                if (proxyServer != null)
+                String principal;
+                String keytabName;
+                if (proxyServer != null) {
                     host = proxyServer.getHost();
-                else if (request.getVirtualHost() != null)
+                    principal = proxyServer.getPrincipal();
+                    keytabName = proxyServer.getPassword();
+                } else if (request.getVirtualHost() != null) {
                     host = request.getVirtualHost();
-                else
+                    // TODO: ??
+                    principal = request.getRealm().getPrincipal();
+                    keytabName = request.getRealm().getPassword();
+                } else {
                     host = uri.getHost();
+                    // TODO: ??
+                    principal = request.getRealm().getPrincipal();
+                    keytabName = request.getRealm().getPassword();
+                }
 
                 try {
-                    authorizationHeader = "Negotiate " + SpnegoEngine.INSTANCE.generateToken(host);
+                    authorizationHeader = "Negotiate " + SpnegoEngine.INSTANCE.generateToken(host, principal, keytabName);
                 } catch (Throwable e) {
                     throw new IOException(e);
                 }
